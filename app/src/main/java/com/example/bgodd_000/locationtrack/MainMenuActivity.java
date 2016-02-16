@@ -83,6 +83,7 @@ public class MainMenuActivity extends AppCompatActivity {
         Log.d(TAG, "Plan Route Click");
     }
 
+
     private void userProfMainClick(View v){
         Log.d(TAG, "User Prof Main Click");
         setContentView(R.layout.user_profile_menu);

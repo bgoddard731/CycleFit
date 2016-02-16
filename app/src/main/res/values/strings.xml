@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">LocationTrack</string>
+    <string name="title_activity_maps">LocTrack</string>
+    <string name="title_activity_main_menu">MainMenuActivity</string>
+</resources>

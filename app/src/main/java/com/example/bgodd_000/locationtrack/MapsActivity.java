@@ -1,6 +1,7 @@
 package com.example.bgodd_000.locationtrack;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.IntentSender;
 import android.content.SharedPreferences;
 import android.location.Location;
@@ -28,10 +29,12 @@ import com.google.android.gms.maps.model.PolygonOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 public class MapsActivity extends FragmentActivity implements
         GoogleApiClient.ConnectionCallbacks,
@@ -42,6 +45,7 @@ public class MapsActivity extends FragmentActivity implements
     int DEFALUT_HR = 80;
     double DEFALUT_RPM = 60;
     double DEFAULT_INCLINE = 0;
+    int MAXROUTES = 100;
 
 
     //Object to model the map presented by the fragment
@@ -57,6 +61,7 @@ public class MapsActivity extends FragmentActivity implements
     //Previous location used to compare locations between consecutive samples
     private Location prev_loc;
     private boolean running = false;
+    private boolean saveOptions = false;
     private routeSummary rt = new routeSummary();
 
     //Connects device to Google Play services used to display location and map
@@ -228,13 +233,30 @@ public class MapsActivity extends FragmentActivity implements
 
     //Start location tracking
     private void startButtonClick(){
-        mMap.clear();
-        TextView resultText = (TextView) findViewById(R.id.result_text);
-        resultText.setText("Tracking in Progress\nCurrent Distance Traveled: 0m\nCurrent Estimated Speed: 0m/s");
-        LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
-        start_time = SystemClock.elapsedRealtimeNanos();
-        rt.start = new Date();
-        running = true;
+        if(saveOptions) {
+            saveOptions = false;
+            Button stopButton = (Button) findViewById(R.id.stop_button);
+            stopButton.setText("Stop");
+            Button startButton = (Button) findViewById(R.id.start_button);
+            startButton.setText("Start");
+            discardRouteInfo();
+        }else{
+            mMap.clear();
+            TextView resultText = (TextView) findViewById(R.id.result_text);
+            resultText.setText("Tracking in Progress\nCurrent Distance Traveled: 0m\nCurrent Estimated Speed: 0m/s");
+            //LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
+            start_time = SystemClock.elapsedRealtimeNanos();
+            rt.start = new Date();
+            running = true;
+            //Debug
+            debugRouteGenerator test = new debugRouteGenerator();
+            rt = test.genRT;
+            for(routeNode n: rt.points){
+                routepoints.add(n.loc);
+            }
+            Polyline route = mMap.addPolyline(new PolylineOptions());
+            route.setPoints(routepoints);
+        }
     }
     private void stopButtonClick(){
         double stop_time = SystemClock.elapsedRealtimeNanos();
@@ -244,7 +266,14 @@ public class MapsActivity extends FragmentActivity implements
         }
         //reset list of locations
         routepoints = new LinkedList<>();
-        if(running){
+        if(saveOptions){
+            saveOptions = false;
+            Button stopButton = (Button) findViewById(R.id.stop_button);
+            stopButton.setText("Stop");
+            Button startButton = (Button) findViewById(R.id.start_button);
+            startButton.setText("Start");
+            saveRouteInfo();
+        }else if(running){
             rt.end = new Date();
             //Calculate summary data
             double route_time = (stop_time - start_time)/1000000000;
@@ -256,9 +285,9 @@ public class MapsActivity extends FragmentActivity implements
                 avg_speed = 0;
             }
             rt.avgSpeed = avg_speed;
-            final TextView resultText = (TextView) findViewById(R.id.result_text);
-            resultText.setText(String.format("Route Ended:\nTotal Distance Traveled: %1$.2fm\nTotal time: %2$.2fsec\n Average Speed: %3$.2fm/s", distance_traveled, route_time , avg_speed));
-            Log.d(TAG, rt.toString());
+            TextView resultText = (TextView) findViewById(R.id.result_text);
+            resultText.setText(String.format("Route Ended:\nTotal Distance Traveled: %1$.2fm\nTotal time: %2$.2fsec\n Average Speed: %3$.2fm/s", distance_traveled, route_time, avg_speed));
+            //Log.d(TAG, rt.toString());
             //reset the global data
             distance_traveled = 0;
             start_time = 0;
@@ -268,20 +297,46 @@ public class MapsActivity extends FragmentActivity implements
                 speeds[i] = 0;
             }
             prev_loc = null;
-            calculateRouteInfo();
+
             running = false;
+            saveOptions = true;
+            Button stopButton = (Button) findViewById(R.id.stop_button);
+            stopButton.setText("Save?");
+            Button startButton = (Button) findViewById(R.id.start_button);
+            startButton.setText("Discard?");
         }
 
     }
-    private void calculateRouteInfo(){
+    private void saveRouteInfo(){
         rt.avgHR = 80;
         rt.avgIncline = 0;
         rt.calorieBurn = 150;
         rt.avgRPM = 60;
 
         //save the route;
-        SharedPreferences prefs = getSharedPreferences("MyPrefs", Context.MODE_PRIVATE);
-        prefs.edit().putString("Route: " + rt.end.getTime(), rt.toString()).commit();
+        String name = rt.end.getTime() + "";
+        Intent prevIntent = new Intent(this, PrevRouteActivity.class);
+        prevIntent.putExtra("routeName", name);
+        prevIntent.putExtra("routeData",rt);
+        prevIntent.putExtra("fromTrack", true);
+        startActivity(prevIntent);
+//        SharedPreferences prefs = getSharedPreferences("MyPrefs", Context.MODE_PRIVATE);
+//        prefs.edit().putString("" + rt.end.getTime(), rt.toString()).apply();
+//        Map<String, ?> map = prefs.getAll();
+//        if(map.size() > MAXROUTES + 1){
+//            TreeMap<String,?> sortedMap= new TreeMap<>(map);
+//            prefs.edit().remove(sortedMap.firstKey()).apply();
+//        }
         rt = new routeSummary();
+        mMap.clear();
+        TextView resultText = (TextView) findViewById(R.id.result_text);
+        resultText.setText("New Route\nDistance Traveled: 0m/s");
+
+    }
+    private void discardRouteInfo(){
+        rt = new routeSummary();
+        mMap.clear();
+        TextView resultText = (TextView) findViewById(R.id.result_text);
+        resultText.setText("New Route\nDistance Traveled: 0m/s");
     }
 }

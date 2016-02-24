@@ -1,11 +1,14 @@
 package com.example.bgodd_000.locationtrack;
 
+import android.os.Parcel;
+import android.os.Parcelable;
+
 import com.google.android.gms.maps.model.LatLng;
 
 /**
  * Created by bgodd_000 on 2/12/2016.
  */
-public class routeNode {
+public class routeNode implements Parcelable {
     public int hr;
     public double rpm;
     public double incline;
@@ -44,5 +47,42 @@ public class routeNode {
         distance = Double.parseDouble(parts[5]);
         speed = Double.parseDouble(parts[6]);
         elapsed_time = Double.parseDouble(parts[7]);
+    }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeInt(hr);
+        dest.writeDouble(rpm);
+        dest.writeDouble(incline);
+        dest.writeDouble(loc.latitude);
+        dest.writeDouble(loc.longitude);
+        dest.writeDouble(distance);
+        dest.writeDouble(speed);
+        dest.writeDouble(elapsed_time);
+    }
+    public static final Parcelable.Creator<routeNode> CREATOR
+            = new Parcelable.Creator<routeNode>() {
+        public routeNode createFromParcel(Parcel in) {
+            return new routeNode(in);
+        }
+
+        public routeNode[] newArray(int size) {
+            return new routeNode[size];
+        }
+    };
+
+    private routeNode(Parcel in){
+        hr = in.readInt();
+        rpm = in.readDouble();
+        incline = in.readDouble();
+        loc = new LatLng(in.readDouble(),in.readDouble());
+        distance = in.readDouble();
+        speed = in.readDouble();
+        elapsed_time = in.readDouble();
     }
 }

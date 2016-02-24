@@ -1,5 +1,6 @@
 package com.example.bgodd_000.locationtrack;
 
+import android.app.ActionBar;
 import android.content.Context;
 import android.content.ContextWrapper;
 import android.content.Intent;
@@ -8,14 +9,21 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.net.Uri;
+import android.nfc.Tag;
+import android.os.SystemClock;
 import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.AttributeSet;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.ActionMenuView;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -27,7 +35,10 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.util.Date;
 import java.util.Map;
+import java.util.TreeMap;
 
 
 public class MainMenuActivity extends AppCompatActivity {
@@ -73,7 +84,28 @@ public class MainMenuActivity extends AppCompatActivity {
     private void prevRouteClick(View v){
         Log.d(TAG, "Prev Route Click");
         Map<String, ?> map = prefs.getAll();
-        Log.d(TAG, map.toString());
+        TreeMap<String, ?> sortedMap = new TreeMap<>(map);
+        setContentView(R.layout.stored_route_list);
+        for (String name : sortedMap.descendingKeySet()) {
+            if(!name.equals("user")){
+                //LinearLayout.LayoutParams
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                TextView entry = new TextView(this);
+                entry.setLayoutParams(lp);
+                Date temp = new Date(Long.parseLong(name));
+                entry.setText(temp.toString());
+                entry.setTextSize(TypedValue.COMPLEX_UNIT_SP, 30);
+                entry.setTag(name);
+                LinearLayout ll = (LinearLayout) findViewById(R.id.route_list);
+                ll.addView(entry);
+                entry.setOnClickListener(new View.OnClickListener() {
+                    public void onClick(View v) {
+                        routeListClick(v);
+                    }
+                });
+            }
+        }
+        //Log.d(TAG, SystemClock.currentThreadTimeMillis()+"");
         //String temp = (String) map.get("test");
         //routeSummary testRT = new routeSummary(temp);
         //Log.d(TAG, testRT.toString());
@@ -81,6 +113,11 @@ public class MainMenuActivity extends AppCompatActivity {
 
     private void planRouteClick(View v){
         Log.d(TAG, "Plan Route Click");
+        debugRouteGenerator test = new debugRouteGenerator();
+        Log.d(TAG, "Created");
+        Log.d(TAG, "Start of Storage: "+SystemClock.currentThreadTimeMillis());
+        prefs.edit().putString(test.genRT.end.getTime() + "", test.genRT.toString()).apply();
+        Log.d(TAG, "After Storage: " + SystemClock.currentThreadTimeMillis());
     }
 
 
@@ -378,10 +415,28 @@ public class MainMenuActivity extends AppCompatActivity {
 
     }
 
+    public void routeListClick(View v){
+        Log.d(TAG, SystemClock.currentThreadTimeMillis()+"start");
+        TextView temp = (TextView) v;
+        String name = temp.getTag().toString();
+        //routeSummary sum = new routeSummary(prefs.getString(name, ""));
+        //Log.d(TAG,sum.toString());
+        Intent prevIntent = new Intent(this, PrevRouteActivity.class);
+        prevIntent.putExtra("routeName",name);
+        startActivity(prevIntent);
+    }
+
     @Override
     public void onBackPressed(){
         if(currentView.equals("user")){
             userProfBackToMainClick();
+        }else if(currentView.equals("route_list")) {
+            setContentView(R.layout.activity_main_menu);
+            setMainMenuEventListeners();
+            if(!user.picPath.equals("blank")){
+                ImageView img = (ImageView) findViewById(R.id.userPicMain);
+                loadImageFromStorage(img, user.picPath);
+            }
         }else{
             super.onBackPressed();
         }

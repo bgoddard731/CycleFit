@@ -1,12 +1,15 @@
 package com.example.bgodd_000.locationtrack;
 
+import android.os.Parcel;
+import android.os.Parcelable;
+
 import java.util.ArrayList;
 import java.util.Date;
 
 /**
  * Created by bgodd_000 on 2/12/2016.
  */
-public class routeSummary {
+public class routeSummary implements Parcelable{
     double totalDistance;
     double elapsedTime;
     public Date start;
@@ -82,4 +85,50 @@ public class routeSummary {
         }
     }
 
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeDouble(totalDistance);
+        dest.writeDouble(elapsedTime);
+        dest.writeLong(start.getTime());
+        dest.writeLong(end.getTime());
+        dest.writeDouble(avgSpeed);
+        dest.writeDouble(avgHR);
+        dest.writeDouble(avgIncline);
+        dest.writeDouble(avgRPM);
+        dest.writeDouble(calorieBurn);
+//        for(routeNode n: points){
+//            dest.writeParcelable(n,0);
+//        }
+    }
+    public static final Parcelable.Creator<routeSummary> CREATOR
+            = new Parcelable.Creator<routeSummary>() {
+        public routeSummary createFromParcel(Parcel in) {
+            return new routeSummary(in);
+        }
+
+        public routeSummary[] newArray(int size) {
+            return new routeSummary[size];
+        }
+    };
+
+    private routeSummary(Parcel in){
+        points = new ArrayList<>();
+        totalDistance = in.readDouble();
+        elapsedTime = in.readDouble();
+        start = new Date(in.readLong());
+        end = new Date(in.readLong());
+        avgSpeed = in.readDouble();
+        avgHR = in.readDouble();
+        avgRPM = in.readDouble();
+        avgIncline = in.readDouble();
+        calorieBurn = in.readDouble();
+//        while(in.dataAvail() > 0){
+//            points.add((routeNode) in.readParcelable(routeNode.class.getClassLoader()));
+//        }
+    }
 }

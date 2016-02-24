@@ -317,17 +317,22 @@ public class MapsActivity extends FragmentActivity implements
         String name = rt.end.getTime() + "";
         Intent prevIntent = new Intent(this, PrevRouteActivity.class);
         prevIntent.putExtra("routeName", name);
-        prevIntent.putExtra("routeData",rt);
+        Globals.summary = rt;
+        //prevIntent.putExtra("routeData",rt);
         prevIntent.putExtra("fromTrack", true);
         startActivity(prevIntent);
-//        SharedPreferences prefs = getSharedPreferences("MyPrefs", Context.MODE_PRIVATE);
-//        prefs.edit().putString("" + rt.end.getTime(), rt.toString()).apply();
-//        Map<String, ?> map = prefs.getAll();
-//        if(map.size() > MAXROUTES + 1){
-//            TreeMap<String,?> sortedMap= new TreeMap<>(map);
-//            prefs.edit().remove(sortedMap.firstKey()).apply();
-//        }
-        rt = new routeSummary();
+//        new Thread(new Runnable() {
+//            public void run() {
+//                SharedPreferences prefs = getSharedPreferences("MyPrefs", Context.MODE_PRIVATE);
+//                prefs.edit().putString("" + rt.end.getTime(), rt.toString()).apply();
+//                Map<String, ?> map = prefs.getAll();
+//                if(map.size() > MAXROUTES + 1){
+//                    TreeMap<String,?> sortedMap= new TreeMap<>(map);
+//                    prefs.edit().remove(sortedMap.firstKey()).apply();
+//                }
+//            }
+//        }).start();
+        //rt = new routeSummary();
         mMap.clear();
         TextView resultText = (TextView) findViewById(R.id.result_text);
         resultText.setText("New Route\nDistance Traveled: 0m/s");

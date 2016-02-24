@@ -22,17 +22,18 @@ public class debugRouteGenerator {
         genRT = new routeSummary();
         double currLat = startLat;
         double currDistance = 0;
-        double currSpeed = 0;
+        double currSpeed = 1;
         Date start = new Date();
         long currTime = start.getTime();
         genRT.start=start;
-        for(int i = 0; i < 2*7200; i++){
+        for(int i = 0; i < 7000; i++){
             LatLng currlatLng = new LatLng(currLat,startLong);
             genRT.points.add(new routeNode(DEFALUT_HR, DEFALUT_RPM, DEFAULT_INCLINE, currlatLng,currDistance,currSpeed,currTime));
             currLat += 2*METER;
             currDistance += 2;
             currTime += 500;
-            currSpeed = 4;
+            if(i%1000 == 0 && i != 0)
+            currSpeed += 2;
         }
         Date end = new Date(currTime);
         genRT.end=end;
@@ -60,26 +61,5 @@ public class debugRouteGenerator {
         genRT.totalDistance=currDistance;
         genRT.avgSpeed=4;
         genRT.elapsedTime= (end.getTime() - startdt.getTime())/1000;
-    }
-    public debugRouteGenerator(boolean a){
-        if(a){
-            debRT = new debugRouteSum();
-            double currLat = startLat;
-            double currDistance = 0;
-            Date start = new Date();
-            long currTime = start.getTime();
-            debRT.start=start;
-            for(int i = 0; i < 2*7200; i++){
-                debRT.points.add(new LatLng(currLat,startLong));
-                currLat += 2*METER;
-                currDistance += 2;
-                currTime += 500;
-            }
-            Date end = new Date(currTime);
-            debRT.end=end;
-            debRT.totalDistance=currDistance;
-            debRT.avgSpeed=4;
-            debRT.elapsedTime= (end.getTime() - start.getTime())/1000;
-        }
     }
 }

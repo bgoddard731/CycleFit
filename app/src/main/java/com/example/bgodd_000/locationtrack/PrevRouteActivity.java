@@ -3,6 +3,7 @@ package com.example.bgodd_000.locationtrack;
         import android.content.Context;
         import android.content.IntentSender;
         import android.content.SharedPreferences;
+        import android.graphics.Color;
         import android.location.Location;
         import android.os.SystemClock;
         import android.support.v4.app.FragmentActivity;
@@ -44,6 +45,8 @@ public class PrevRouteActivity extends FragmentActivity implements
     private GoogleApiClient mGoogleApiClient;
     private routeSummary rt;
     private ArrayList<LatLng> routepoints = new ArrayList<>();
+    private int index;
+    private int MAXINDEX = 1;
     //Stores the list of points along the route
     //Tag for Debugging
     public static final String TAG = MapsActivity.class.getSimpleName();
@@ -68,7 +71,8 @@ public class PrevRouteActivity extends FragmentActivity implements
             String rtString = prefs.getString(sum_name,"");
             rt = new routeSummary(rtString);
         }else{
-            rt = extras.getParcelable("routeData");
+            //rt = extras.getParcelable("routeData");
+            rt = Globals.summary;
         }
 
         TextView sumText = (TextView) findViewById(R.id.route_sum_text);
@@ -76,6 +80,19 @@ public class PrevRouteActivity extends FragmentActivity implements
         for(routeNode n: rt.points){
             routepoints.add(n.loc);
         }
+        Button nextButton = (Button) findViewById(R.id.next_sum_button);
+        nextButton.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                nextClick(v);
+            }
+        });
+        Button prevButton = (Button) findViewById(R.id.prev_sum_button);
+        prevButton.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                prevClick(v);
+            }
+        });
+        index = 0;
         Log.d(TAG,"Post RT point iteration: "+SystemClock.currentThreadTimeMillis());
     }
     @Override
@@ -119,7 +136,7 @@ public class PrevRouteActivity extends FragmentActivity implements
             mMap.moveCamera(CameraUpdateFactory.newLatLng(routepoints.get(0)));
             mMap.moveCamera(CameraUpdateFactory.zoomTo(13));
         }
-        Log.d(TAG, SystemClock.currentThreadTimeMillis()+"done");
+        Log.d(TAG, SystemClock.currentThreadTimeMillis() + "done");
 
     }
     @Override
@@ -139,4 +156,124 @@ public class PrevRouteActivity extends FragmentActivity implements
             Log.i(TAG, "Location services failed with code: " + connectionResult.getErrorCode());
         }
     }
+
+    private void nextClick(View v){
+        if(index == MAXINDEX){
+            index = 0;
+        }else{
+            index++;
+        }
+        initializeScreen();
+    }
+    private void prevClick(View v){
+        if(index == 0){
+            index = MAXINDEX;
+        }else{
+            index--;
+        }
+        initializeScreen();
+    }
+
+    private void initializeScreen(){
+        mMap.clear();
+        if(!routepoints.isEmpty()){
+            mMap.addMarker(new MarkerOptions()
+                    .position(routepoints.get(0))
+                    .title("Route Start")
+                    .snippet(rt.start.toString())
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
+            mMap.addMarker(new MarkerOptions()
+                    .position(routepoints.get(routepoints.size() - 1))
+                    .title("Route End")
+                    .snippet(rt.end.toString())
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
+            mMap.moveCamera(CameraUpdateFactory.newLatLng(routepoints.get(0)));
+            mMap.moveCamera(CameraUpdateFactory.zoomTo(13));
+        }
+        TextView sumText = (TextView) findViewById(R.id.route_sum_text);
+        switch (index){
+            case 0:
+                if(!routepoints.isEmpty()){
+                    Polyline route = mMap.addPolyline(new PolylineOptions());
+                    route.setPoints(routepoints);
+                }
+                sumText.setText(String.format("Route Summary:\nTotal Distance Traveled: %1$.2fm\nTotal time: %2$.2fsec\n Average Speed: %3$.2fm/s", rt.totalDistance, rt.elapsedTime, rt.avgSpeed));
+                break;
+            case 1:
+                if(!routepoints.isEmpty()){
+                    initializeSpeedMap();
+                }
+
+                break;
+        }
+    }
+    private void initializeSpeedMap(){
+        double minSpeed = 99999;
+        double maxSpeed = 0;
+        ArrayList<ArrayList<LatLng>> pointList = new ArrayList<>();
+        ArrayList<LatLng> temp = new ArrayList<>();
+        ArrayList<Integer> ranges = new ArrayList<>();
+        int curr_range = calcSpeedRange(rt.points.get(0).speed);
+        for(routeNode n: rt.points){
+            if(n.speed < minSpeed){
+                minSpeed = n.speed;
+            }
+            if(n.speed > maxSpeed){
+                maxSpeed = n.speed;
+            }
+            if(calcSpeedRange(n.speed) == curr_range){
+                temp.add(n.loc);
+            }else{
+                temp.add(n.loc);
+                pointList.add(temp);
+                ranges.add(curr_range);
+                temp = new ArrayList<>();
+                curr_range = calcSpeedRange(n.speed);
+            }
+        }
+        pointList.add(temp);
+        ranges.add(curr_range);
+        for(int i = 0; i < pointList.size(); i++){
+            Polyline route = mMap.addPolyline(new PolylineOptions());
+            route.setPoints(pointList.get(i));
+            route.setColor(calcSpeedColor(ranges.get(i)));
+        }
+        TextView sumText = (TextView) findViewById(R.id.route_sum_text);
+        sumText.setText(String.format("Speed Summary:\nAverage Speed: %1$.2fm\nMinimum Speed: %2$.2fsec\n Maximum Speed: %3$.2fm/s", rt.avgSpeed, minSpeed, maxSpeed));
+
+    }
+
+    private int calcSpeedRange(double speed){
+        if(speed < 2){
+            return 0;
+        }else if(speed >= 2 && speed < 4){
+            return 1;
+        }else if(speed >= 4 && speed < 6){
+            return 2;
+        }else if(speed >= 6 && speed < 8){
+            return 3;
+        }else if(speed >= 8 && speed < 10) {
+            return 4;
+        }else{
+            return 5;
+        }
+    }
+    private int calcSpeedColor(int range){
+        switch (range){
+            case 0:
+                return Color.BLACK;
+            case 1:
+                return Color.MAGENTA;
+            case 2:
+                return Color.BLUE;
+            case 3:
+                return Color.GREEN;
+            case 4:
+                return Color.YELLOW;
+            case 5:
+                return Color.RED;
+            default: return Color.BLACK;
+        }
+    }
+
 }

@@ -244,18 +244,18 @@ public class MapsActivity extends FragmentActivity implements
             mMap.clear();
             TextView resultText = (TextView) findViewById(R.id.result_text);
             resultText.setText("Tracking in Progress\nCurrent Distance Traveled: 0m\nCurrent Estimated Speed: 0m/s");
-            //LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
+            LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
             start_time = SystemClock.elapsedRealtimeNanos();
             rt.start = new Date();
             running = true;
             //Debug
-            debugRouteGenerator test = new debugRouteGenerator();
-            rt = test.genRT;
-            for(routeNode n: rt.points){
-                routepoints.add(n.loc);
-            }
-            Polyline route = mMap.addPolyline(new PolylineOptions());
-            route.setPoints(routepoints);
+//            debugRouteGenerator test = new debugRouteGenerator();
+//            rt = test.genRT;
+//            for(routeNode n: rt.points){
+//                routepoints.add(n.loc);
+//            }
+//            Polyline route = mMap.addPolyline(new PolylineOptions());
+//            route.setPoints(routepoints);
         }
     }
     private void stopButtonClick(){
@@ -274,12 +274,13 @@ public class MapsActivity extends FragmentActivity implements
             startButton.setText("Start");
             saveRouteInfo();
         }else if(running){
+            //Debug
             rt.end = new Date();
             //Calculate summary data
             double route_time = (stop_time - start_time)/1000000000;
             rt.elapsedTime = route_time;
             rt.totalDistance = distance_traveled;
-            double avg_speed = distance_traveled / route_time;
+           double avg_speed = distance_traveled / route_time;
 
             if(distance_traveled == 0 || route_time == 0) {
                 avg_speed = 0;
@@ -321,17 +322,17 @@ public class MapsActivity extends FragmentActivity implements
         //prevIntent.putExtra("routeData",rt);
         prevIntent.putExtra("fromTrack", true);
         startActivity(prevIntent);
-//        new Thread(new Runnable() {
-//            public void run() {
-//                SharedPreferences prefs = getSharedPreferences("MyPrefs", Context.MODE_PRIVATE);
-//                prefs.edit().putString("" + rt.end.getTime(), rt.toString()).apply();
-//                Map<String, ?> map = prefs.getAll();
-//                if(map.size() > MAXROUTES + 1){
-//                    TreeMap<String,?> sortedMap= new TreeMap<>(map);
-//                    prefs.edit().remove(sortedMap.firstKey()).apply();
-//                }
-//            }
-//        }).start();
+        new Thread(new Runnable() {
+            public void run() {
+                SharedPreferences prefs = getSharedPreferences("MyPrefs", Context.MODE_PRIVATE);
+                prefs.edit().putString("" + rt.end.getTime(), rt.toString()).apply();
+                Map<String, ?> map = prefs.getAll();
+                if(map.size() > MAXROUTES + 1){
+                    TreeMap<String,?> sortedMap= new TreeMap<>(map);
+                    prefs.edit().remove(sortedMap.firstKey()).apply();
+                }
+            }
+        }).start();
         //rt = new routeSummary();
         mMap.clear();
         TextView resultText = (TextView) findViewById(R.id.result_text);

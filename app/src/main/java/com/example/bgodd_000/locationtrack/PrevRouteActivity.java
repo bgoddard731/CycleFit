@@ -46,7 +46,7 @@ public class PrevRouteActivity extends FragmentActivity implements
     private routeSummary rt;
     private ArrayList<LatLng> routepoints = new ArrayList<>();
     private int index;
-    private int MAXINDEX = 1;
+    private int MAXINDEX = 4;
     //Stores the list of points along the route
     //Tag for Debugging
     public static final String TAG = MapsActivity.class.getSimpleName();
@@ -76,7 +76,7 @@ public class PrevRouteActivity extends FragmentActivity implements
         }
 
         TextView sumText = (TextView) findViewById(R.id.route_sum_text);
-        sumText.setText(String.format("Route Summary:\nTotal Distance Traveled: %1$.2fm\nTotal time: %2$.2fsec\n Average Speed: %3$.2fm/s", rt.totalDistance, rt.elapsedTime, rt.avgSpeed));
+        sumText.setText(String.format("Route Summary:\nTotal Distance Traveled: %.2f m\nTotal time: %.2f sec\n Average Speed: %.2f m/s\nAverage Incline: %.2f deg\nAverage Pedal RPM: %.2f rpm\nAverage Heart Rate: %.2f bpm\nCalories Burned: %.1f cal", rt.totalDistance, rt.elapsedTime, rt.avgSpeed, rt.avgIncline, rt.avgRPM, rt.avgHR, rt.calorieBurn));
         for(routeNode n: rt.points){
             routepoints.add(n.loc);
         }
@@ -187,8 +187,8 @@ public class PrevRouteActivity extends FragmentActivity implements
                     .title("Route End")
                     .snippet(rt.end.toString())
                     .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
-            mMap.moveCamera(CameraUpdateFactory.newLatLng(routepoints.get(0)));
-            mMap.moveCamera(CameraUpdateFactory.zoomTo(13));
+//            mMap.moveCamera(CameraUpdateFactory.newLatLng(routepoints.get(0)));
+//            mMap.moveCamera(CameraUpdateFactory.zoomTo(13));
         }
         TextView sumText = (TextView) findViewById(R.id.route_sum_text);
         switch (index){
@@ -197,13 +197,27 @@ public class PrevRouteActivity extends FragmentActivity implements
                     Polyline route = mMap.addPolyline(new PolylineOptions());
                     route.setPoints(routepoints);
                 }
-                sumText.setText(String.format("Route Summary:\nTotal Distance Traveled: %1$.2fm\nTotal time: %2$.2fsec\n Average Speed: %3$.2fm/s", rt.totalDistance, rt.elapsedTime, rt.avgSpeed));
+                sumText.setText(String.format("Route Summary:\nTotal Distance Traveled: %.2f m\nTotal time: %.2f sec\n Average Speed: %.2f m/s\nAverage Incline: %.2f deg\nAverage Pedal RPM: %.2f rpm\nAverage Heart Rate: %.2f bpm\nCalories Burned: %.1f cal", rt.totalDistance, rt.elapsedTime, rt.avgSpeed, rt.avgIncline, rt.avgRPM, rt.avgHR, rt.calorieBurn));
                 break;
             case 1:
                 if(!routepoints.isEmpty()){
                     initializeSpeedMap();
                 }
-
+                break;
+            case 2:
+                if(!routepoints.isEmpty()){
+                    initializeHRMAP();
+                }
+                break;
+            case 3:
+                if(!routepoints.isEmpty()){
+                    initializeRPMMap();
+                }
+                break;
+            case 4:
+                if(!routepoints.isEmpty()){
+                    initializeInclineMap();
+                }
                 break;
         }
     }
@@ -228,6 +242,7 @@ public class PrevRouteActivity extends FragmentActivity implements
                 pointList.add(temp);
                 ranges.add(curr_range);
                 temp = new ArrayList<>();
+                temp.add(n.loc);
                 curr_range = calcSpeedRange(n.speed);
             }
         }
@@ -236,10 +251,10 @@ public class PrevRouteActivity extends FragmentActivity implements
         for(int i = 0; i < pointList.size(); i++){
             Polyline route = mMap.addPolyline(new PolylineOptions());
             route.setPoints(pointList.get(i));
-            route.setColor(calcSpeedColor(ranges.get(i)));
+            route.setColor(calcRangeColor(ranges.get(i)));
         }
         TextView sumText = (TextView) findViewById(R.id.route_sum_text);
-        sumText.setText(String.format("Speed Summary:\nAverage Speed: %1$.2fm\nMinimum Speed: %2$.2fsec\n Maximum Speed: %3$.2fm/s", rt.avgSpeed, minSpeed, maxSpeed));
+        sumText.setText(String.format("Speed Summary:\nAverage Speed: %1.2fm/s\nMinimum Speed: %2.2fm/s\n Maximum Speed: %3.2fm/s", rt.avgSpeed, minSpeed, maxSpeed));
 
     }
 
@@ -258,7 +273,163 @@ public class PrevRouteActivity extends FragmentActivity implements
             return 5;
         }
     }
-    private int calcSpeedColor(int range){
+
+    private void initializeHRMAP(){
+        int minHR = 99999;
+        int maxHR = 0;
+        ArrayList<ArrayList<LatLng>> pointList = new ArrayList<>();
+        ArrayList<LatLng> temp = new ArrayList<>();
+        ArrayList<Integer> ranges = new ArrayList<>();
+        int curr_range = calcHRRange(rt.points.get(0).hr);
+        for(routeNode n: rt.points){
+            if(n.hr < minHR){
+                minHR = n.hr;
+            }
+            if(n.hr > maxHR){
+                maxHR = n.hr;
+            }
+            if(calcHRRange(n.hr) == curr_range){
+                temp.add(n.loc);
+            }else{
+                temp.add(n.loc);
+                pointList.add(temp);
+                ranges.add(curr_range);
+                temp = new ArrayList<>();
+                temp.add(n.loc);
+                curr_range = calcHRRange(n.hr);
+            }
+        }
+        pointList.add(temp);
+        ranges.add(curr_range);
+        for(int i = 0; i < pointList.size(); i++){
+            Polyline route = mMap.addPolyline(new PolylineOptions());
+            route.setPoints(pointList.get(i));
+            route.setColor(calcRangeColor(ranges.get(i)));
+        }
+        TextView sumText = (TextView) findViewById(R.id.route_sum_text);
+        sumText.setText(String.format("Heart Rate Summary:\nAverage Heart Rate: %.2f bpm\nMinimum Heart Rate: %d bpm\n Maximum Heart Rate: %d bpm", rt.avgHR, minHR, maxHR));
+    }
+    private int calcHRRange(int hr){
+        if(hr < 60){
+            return 0;
+        }else if(hr >= 60 && hr < 90){
+            return 1;
+        }else if(hr >= 90 && hr < 110){
+            return 2;
+        }else if(hr >= 110 && hr < 140){
+            return 3;
+        }else if(hr >= 140 && hr < 170) {
+            return 4;
+        }else{
+            return 5;
+        }
+    }
+
+    private void initializeRPMMap(){
+        double minRPM = 99999;
+        double maxRPM = 0;
+        ArrayList<ArrayList<LatLng>> pointList = new ArrayList<>();
+        ArrayList<LatLng> temp = new ArrayList<>();
+        ArrayList<Integer> ranges = new ArrayList<>();
+        int curr_range = calcRPMRange(rt.points.get(0).rpm);
+        for(routeNode n: rt.points){
+            if(n.rpm < minRPM){
+                minRPM = n.rpm;
+            }
+            if(n.hr > maxRPM){
+                maxRPM = n.rpm;
+            }
+            if(calcRPMRange(n.rpm) == curr_range){
+                temp.add(n.loc);
+            }else{
+                temp.add(n.loc);
+                pointList.add(temp);
+                ranges.add(curr_range);
+                temp = new ArrayList<>();
+                temp.add(n.loc);
+                curr_range = calcRPMRange(n.rpm);
+            }
+        }
+        pointList.add(temp);
+        ranges.add(curr_range);
+        for(int i = 0; i < pointList.size(); i++){
+            Polyline route = mMap.addPolyline(new PolylineOptions());
+            route.setPoints(pointList.get(i));
+            route.setColor(calcRangeColor(ranges.get(i)));
+        }
+        TextView sumText = (TextView) findViewById(R.id.route_sum_text);
+        sumText.setText(String.format("Pedal RPM Summary:\nAverage RPM: %.2f rpm\nMinimum RPM: %.2f rpm\n Maximum RPM: %.2f rpm", rt.avgRPM, minRPM, maxRPM));
+    }
+    private int calcRPMRange(double rpm){
+        if(rpm < 30){
+            return 0;
+        }else if(rpm >= 30 && rpm < 45){
+            return 1;
+        }else if(rpm >= 45 && rpm < 60){
+            return 2;
+        }else if(rpm >= 60 && rpm < 75){
+            return 3;
+        }else if(rpm >= 75 && rpm < 90) {
+            return 4;
+        }else{
+            return 5;
+        }
+    }
+
+    private void initializeInclineMap(){
+        double minIncline = 999;
+        double maxIncline = -999;
+        ArrayList<ArrayList<LatLng>> pointList = new ArrayList<>();
+        ArrayList<LatLng> temp = new ArrayList<>();
+        ArrayList<Integer> ranges = new ArrayList<>();
+        int curr_range = calcInclineRange(rt.points.get(0).incline);
+        for(routeNode n: rt.points){
+            if(n.incline < minIncline){
+                minIncline = n.incline;
+            }
+            if(n.incline > maxIncline){
+                maxIncline = n.incline;
+            }
+            if(calcInclineRange(n.incline) == curr_range){
+                temp.add(n.loc);
+            }else{
+                temp.add(n.loc);
+                pointList.add(temp);
+                ranges.add(curr_range);
+                temp = new ArrayList<>();
+                temp.add(n.loc);
+                curr_range = calcInclineRange(n.incline);
+            }
+        }
+        pointList.add(temp);
+        ranges.add(curr_range);
+        for(int i = 0; i < pointList.size(); i++){
+            Polyline route = mMap.addPolyline(new PolylineOptions());
+            route.setPoints(pointList.get(i));
+            route.setColor(calcRangeColor(ranges.get(i)));
+        }
+        TextView sumText = (TextView) findViewById(R.id.route_sum_text);
+        sumText.setText(String.format("Incline Summary:\nAverage Incline: %1.2f deg\nMinimum Incline: %2.2f deg\n Maximum Incline: %3.2f deg", rt.avgIncline, minIncline, maxIncline));
+
+    }
+
+    private int calcInclineRange(double incline){
+        if(incline < -45){
+            return 0;
+        }else if(incline >= -45 && incline < -15){
+            return 1;
+        }else if(incline >= -15 && incline < 15){
+            return 2;
+        }else if(incline >= 15 && incline < 45){
+            return 3;
+        }else if(incline >= 45 && incline < 75) {
+            return 4;
+        }else{
+            return 5;
+        }
+    }
+
+    private int calcRangeColor(int range){
         switch (range){
             case 0:
                 return Color.BLACK;
@@ -275,5 +446,6 @@ public class PrevRouteActivity extends FragmentActivity implements
             default: return Color.BLACK;
         }
     }
+
 
 }

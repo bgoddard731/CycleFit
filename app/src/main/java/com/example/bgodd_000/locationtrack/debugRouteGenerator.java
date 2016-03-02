@@ -29,10 +29,11 @@ public class debugRouteGenerator {
         Date start = new Date();
         long currTime = start.getTime();
         genRT.start=start;
-        for(int i = 0; i < 7000; i++){
+        for(int i = 0; i < 120*120; i++){
             LatLng currlatLng = new LatLng(currLat,startLong);
             genRT.points.add(new routeNode(hr, rpm, incline, currlatLng,currDistance,currSpeed,currTime));
-            currLat += 2*METER;
+            currLat += 2*METER
+            ;
             currDistance += 2;
             currTime += 500;
             if(i%1000 == 0 && i != 0){

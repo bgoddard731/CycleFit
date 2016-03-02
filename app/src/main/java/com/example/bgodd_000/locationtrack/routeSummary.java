@@ -1,6 +1,8 @@
 package com.example.bgodd_000.locationtrack;
 
 
+import android.content.ContextWrapper;
+
 import java.util.ArrayList;
 import java.util.Date;
 
@@ -66,6 +68,7 @@ public class routeSummary{
         }
         return print;
     }
+
     public routeSummary(String contents){
         points = new ArrayList<>();
         String[] parts = contents.split(";");

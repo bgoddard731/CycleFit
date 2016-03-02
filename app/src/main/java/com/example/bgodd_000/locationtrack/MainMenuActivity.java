@@ -47,7 +47,7 @@ public class MainMenuActivity extends AppCompatActivity {
     private String currentView;
     private SharedPreferences prefs;
 
-    public static final String TAG = MainMenuActivity.class.getSimpleName();
+    public static final String TAG = MapsActivity.class.getSimpleName();
 
     @Override
     public void setContentView(int layoutResID) {
@@ -83,6 +83,7 @@ public class MainMenuActivity extends AppCompatActivity {
 
     private void prevRouteClick(View v){
         Log.d(TAG, "Prev Route Click");
+        Log.d(TAG, "Start of List: " + SystemClock.elapsedRealtimeNanos());
         Map<String, ?> map = prefs.getAll();
         TreeMap<String, ?> sortedMap = new TreeMap<>(map);
         setContentView(R.layout.stored_route_list);
@@ -105,6 +106,7 @@ public class MainMenuActivity extends AppCompatActivity {
                 });
             }
         }
+        Log.d(TAG, "End of List: " + SystemClock.elapsedRealtimeNanos());
         //Log.d(TAG, SystemClock.currentThreadTimeMillis()+"");
         //String temp = (String) map.get("test");
         //routeSummary testRT = new routeSummary(temp);
@@ -113,11 +115,29 @@ public class MainMenuActivity extends AppCompatActivity {
 
     private void planRouteClick(View v){
         Log.d(TAG, "Plan Route Click");
-        debugRouteGenerator test = new debugRouteGenerator();
-        Log.d(TAG, "Created");
-        Log.d(TAG, "Start of Storage: "+SystemClock.currentThreadTimeMillis());
-        prefs.edit().putString(test.genRT.end.getTime() + "", test.genRT.toString()).apply();
-        Log.d(TAG, "After Storage: " + SystemClock.currentThreadTimeMillis());
+        Intent plan_intent = new Intent(this, PlanActivity.class);
+        startActivity(plan_intent);
+//        Debug
+//        debugRouteGenerator test = new debugRouteGenerator();
+//        routeSummary rt = test.genRT;
+//        Log.d(TAG, "Created");
+//        Log.d(TAG, "Start of Storage: " + SystemClock.currentThreadTimeMillis());
+//        String temp = rt.toString();
+//        for(int i = 0; i < 100; i++){
+//            ContextWrapper cw = new ContextWrapper(getApplicationContext());
+//            try {
+//                OutputStreamWriter outputStreamWriter = new OutputStreamWriter(cw.openFileOutput((test.genRT.end.getTime() + i)+".txt", Context.MODE_PRIVATE));
+//                outputStreamWriter.write(temp);
+//                outputStreamWriter.close();
+//            }
+//            catch (IOException e) {
+//                Log.e("Exception", "File write failed: " + e.toString());
+//            }
+//            prefs.edit().putString((test.genRT.end.getTime() + i) + "", (test.genRT.end.getTime() + i) + ".txt").commit();
+//            Log.d(TAG, "After Storage: " + i);
+//        }
+
+
     }
 
 
@@ -415,12 +435,13 @@ public class MainMenuActivity extends AppCompatActivity {
 
     }
 
+
     public void routeListClick(View v){
-        Log.d(TAG, SystemClock.currentThreadTimeMillis()+"start");
         TextView temp = (TextView) v;
         String name = temp.getTag().toString();
         //routeSummary sum = new routeSummary(prefs.getString(name, ""));
         //Log.d(TAG,sum.toString());
+        Log.d(TAG, "Start of Load: " + SystemClock.elapsedRealtimeNanos());
         Intent prevIntent = new Intent(this, PrevRouteActivity.class);
         prevIntent.putExtra("routeName",name);
         startActivity(prevIntent);

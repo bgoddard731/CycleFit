@@ -42,6 +42,8 @@
         </activity>
         <activity android:name=".PrevRouteActivity" >
         </activity>
+        <activity android:name=".PlanActivity" >
+        </activity>
     </application>
 
 </manifest>

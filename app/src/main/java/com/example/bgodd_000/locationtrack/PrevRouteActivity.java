@@ -30,6 +30,12 @@ package com.example.bgodd_000.locationtrack;
         import com.google.android.gms.maps.model.Polyline;
         import com.google.android.gms.maps.model.PolylineOptions;
 
+        import java.io.BufferedReader;
+        import java.io.File;
+        import java.io.FileNotFoundException;
+        import java.io.IOException;
+        import java.io.InputStream;
+        import java.io.InputStreamReader;
         import java.util.ArrayList;
         import java.util.Date;
         import java.util.LinkedList;
@@ -68,8 +74,8 @@ public class PrevRouteActivity extends FragmentActivity implements
         if(!track){
             String sum_name = extras.getString("routeName");
             SharedPreferences prefs = getSharedPreferences("MyPrefs", Context.MODE_PRIVATE);
-            String rtString = prefs.getString(sum_name,"");
-            rt = new routeSummary(rtString);
+            String rtPath = prefs.getString(sum_name,"");
+            loadRouteFromFile(rtPath);
         }else{
             //rt = extras.getParcelable("routeData");
             rt = Globals.summary;
@@ -93,7 +99,7 @@ public class PrevRouteActivity extends FragmentActivity implements
             }
         });
         index = 0;
-        Log.d(TAG,"Post RT point iteration: "+SystemClock.currentThreadTimeMillis());
+        //Log.d(TAG,"Post on Create: "+SystemClock.elapsedRealtimeNanos());
     }
     @Override
     protected void onResume(){
@@ -136,8 +142,7 @@ public class PrevRouteActivity extends FragmentActivity implements
             mMap.moveCamera(CameraUpdateFactory.newLatLng(routepoints.get(0)));
             mMap.moveCamera(CameraUpdateFactory.zoomTo(13));
         }
-        Log.d(TAG, SystemClock.currentThreadTimeMillis() + "done");
-
+        Log.d(TAG, "End of Load: " + SystemClock.elapsedRealtimeNanos());
     }
     @Override
     public void onConnectionSuspended(int i) {
@@ -156,7 +161,34 @@ public class PrevRouteActivity extends FragmentActivity implements
             Log.i(TAG, "Location services failed with code: " + connectionResult.getErrorCode());
         }
     }
+    private void loadRouteFromFile(String path){
+        String ret = "";
 
+        try {
+            InputStream inputStream = openFileInput(path);
+
+            if ( inputStream != null ) {
+                InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
+                BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+                String receiveString = "";
+                StringBuilder stringBuilder = new StringBuilder();
+
+                while ( (receiveString = bufferedReader.readLine()) != null ) {
+                    stringBuilder.append(receiveString);
+                }
+
+                inputStream.close();
+                ret = stringBuilder.toString();
+            }
+        }
+        catch (FileNotFoundException e) {
+            Log.e("login activity", "File not found: " + e.toString());
+        } catch (IOException e) {
+            Log.e("login activity", "Can not read file: " + e.toString());
+        }
+
+        rt = new routeSummary(ret);
+    }
     private void nextClick(View v){
         if(index == MAXINDEX){
             index = 0;

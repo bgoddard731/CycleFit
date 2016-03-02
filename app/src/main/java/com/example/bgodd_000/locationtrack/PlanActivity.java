@@ -259,8 +259,27 @@ public class PlanActivity extends FragmentActivity implements
         if(start == null || end == null){
             Toast.makeText(getApplicationContext(), "Must Place a Start and End Markers!", Toast.LENGTH_SHORT).show();
         }else{
-            Log.d(TAG,"GO!!!!!");
+            String url = createDirectionsUrl();
+            Log.d(TAG,url);
+
         }
+    }
+
+    private String createDirectionsUrl(){
+        String url = "";
+        url += "https://maps.googleapis.com/maps/api/directions/json?";
+        url += "origin="+start.getPosition().latitude + "," + start.getPosition().longitude;
+        url += "&destination=" + end.getPosition().latitude + "," + end.getPosition().longitude;
+        url += "&mode=bicycling";
+        if(waypoints.size() > 0){
+            String waypoint_opts = "&waypoints=optimize:true";
+            for(int i = 0; i < waypoints.size(); i++){
+                waypoint_opts += "|via:"+waypoints.get(i).getPosition().latitude + "," + waypoints.get(i).getPosition().longitude;
+            }
+            url += waypoint_opts;
+        }
+        url+="&key=AIzaSyC7oVSbp-YRTOD3gmdeoiq827GTkJkkokM";
+        return url;
     }
 
 }

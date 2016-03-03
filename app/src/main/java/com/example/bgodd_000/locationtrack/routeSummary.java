@@ -68,6 +68,19 @@ public class routeSummary{
         }
         return print;
     }
+    public String shortToString(){
+        String print = "";
+        print += totalDistance + ";";
+        print += elapsedTime+ ";";
+        print += start.getTime()+ ";";
+        print += end.getTime()+ ";";
+        print += avgHR+ ";";
+        print += avgIncline+ ";";
+        print += avgSpeed+ ";";
+        print += avgRPM+ ";";
+        print += calorieBurn+ ";";
+        return print;
+    }
 
     public routeSummary(String contents){
         points = new ArrayList<>();

@@ -44,6 +44,8 @@
         </activity>
         <activity android:name=".PlanActivity" >
         </activity>
+        <activity android:name=".simList" >
+        </activity>
     </application>
 
 </manifest>

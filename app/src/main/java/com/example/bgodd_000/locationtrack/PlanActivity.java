@@ -2,6 +2,7 @@ package com.example.bgodd_000.locationtrack;
 
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.Intent;
 import android.content.IntentSender;
 import android.content.SharedPreferences;
 import android.graphics.Color;
@@ -12,8 +13,12 @@ import android.support.v4.app.FragmentActivity;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -30,11 +35,24 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.Map;
+import java.util.TreeMap;
 
 public class PlanActivity extends FragmentActivity implements
         GoogleApiClient.ConnectionCallbacks,
@@ -48,7 +66,10 @@ public class PlanActivity extends FragmentActivity implements
     private Marker end;
     private ArrayList<Marker> waypoints;
     private ArrayList<LatLng> routepoints = new ArrayList<>();
+    private ArrayList<smallRouteSummary> sim_routes;
+    private long distance_planned;
     private int mode;
+    private String currentView;
     //Stores the list of points along the route
     //Tag for Debugging
     public static final String TAG = MapsActivity.class.getSimpleName();
@@ -68,7 +89,11 @@ public class PlanActivity extends FragmentActivity implements
         waypoints = new ArrayList<>();
         mode = 0;
         setModeText();
+        setPlanEventListeners();
 
+    }
+
+    public void setPlanEventListeners(){
         Button start_button = (Button) findViewById(R.id.start_button);
         start_button.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -93,7 +118,15 @@ public class PlanActivity extends FragmentActivity implements
                 goButtonClick(v);
             }
         });
+        Button simViewButton = (Button) findViewById(R.id.simViewButton);
+        simViewButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                simRoutesClick();
+            }
+        });
     }
+
 
     @Override
     protected void onResume() {
@@ -227,7 +260,7 @@ public class PlanActivity extends FragmentActivity implements
                     .snippet(loc.toString())
                     .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE)));
             waypoints.add(temp);
-        }else{
+        }else if(mode == 2){
             if(end != null){
                 end.setPosition(loc);
                 end.setSnippet(loc.toString());
@@ -256,12 +289,33 @@ public class PlanActivity extends FragmentActivity implements
     }
 
     private void goButtonClick(View v){
+        Button go_button = (Button) findViewById(R.id.go_button);
+        if(go_button.getText().equals("Reset")){
+            Log.d(TAG,"RESET");
+            Button start_button = (Button) findViewById(R.id.start_button);
+            Button waypoint_button = (Button) findViewById(R.id.waypoint_button);
+            Button end_button = (Button) findViewById(R.id.end_button);
+            Button simViewButton = (Button) findViewById(R.id.simViewButton);
+            simViewButton.setVisibility(View.INVISIBLE);
+            start_button.setVisibility(View.VISIBLE);
+            end_button.setVisibility(View.VISIBLE);
+            waypoint_button.setVisibility(View.VISIBLE);
+            go_button.setText("Go");
+            mMap.clear();
+            mode = 0;
+            start = null;
+            end = null;
+            waypoints = new ArrayList<>();
+            setModeText();
+            return;
+        }
         if(start == null || end == null){
             Toast.makeText(getApplicationContext(), "Must Place a Start and End Markers!", Toast.LENGTH_SHORT).show();
         }else{
             String url = createDirectionsUrl();
             Log.d(TAG,url);
-
+            mode = 3;
+            new JSONconnection().execute(url);
         }
     }
 
@@ -278,8 +332,205 @@ public class PlanActivity extends FragmentActivity implements
             }
             url += waypoint_opts;
         }
-        url+="&key=AIzaSyC7oVSbp-YRTOD3gmdeoiq827GTkJkkokM";
+        url+="&key=AIzaSyB_zRbAj1yfngb_APNXfRY1DUhXLrQ6rzI";
         return url;
     }
 
+    public class JSONconnection extends AsyncTask<String, Void, String>{
+
+        @Override
+        protected String doInBackground(String... params) {
+            return getJSON(params[0],10000);
+        }
+
+        // onPostExecute displays the results of the AsyncTask.
+        @Override
+        protected void onPostExecute(String result) {
+            //Log.d(TAG,result);
+            try {
+                //Parse Results
+                JSONObject res = new JSONObject(result);
+                JSONArray routes = res.getJSONArray("routes");
+                JSONObject route = routes.getJSONObject(0);
+                JSONObject overviewPolylines = route.getJSONObject("overview_polyline");
+                String encodedString = overviewPolylines.getString("points");
+                routepoints = decodePoly(encodedString);
+                Polyline dirs = mMap.addPolyline(new PolylineOptions());
+                dirs.setPoints(routepoints);
+                JSONArray legs = route.getJSONArray("legs");
+                JSONObject leg = legs.getJSONObject(0);
+                JSONObject distance = leg.getJSONObject("distance");
+                String distanceval = distance.getString("value");
+                distance_planned = Long.parseLong(distanceval);
+                showPlanResults();
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    public String getJSON(String url, int timeout) {
+        HttpURLConnection c = null;
+        try {
+            URL u = new URL(url);
+            c = (HttpURLConnection) u.openConnection();
+            c.setRequestMethod("GET");
+            c.setRequestProperty("Content-length", "0");
+            c.setUseCaches(false);
+            c.setAllowUserInteraction(false);
+            c.setConnectTimeout(timeout);
+            c.setReadTimeout(timeout);
+            c.connect();
+            int status = c.getResponseCode();
+
+            switch (status) {
+                case 200:
+                case 201:
+                    BufferedReader br = new BufferedReader(new InputStreamReader(c.getInputStream()));
+                    StringBuilder sb = new StringBuilder();
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        sb.append(line+"\n");
+                    }
+                    br.close();
+                    return sb.toString();
+            }
+
+        } catch (MalformedURLException ex) {
+            Log.d(TAG, ex.toString());
+        } catch (IOException ex) {
+            Log.d(TAG, ex.toString());
+        } finally {
+            if (c != null) {
+                try {
+                    c.disconnect();
+                } catch (Exception ex) {
+                    Log.d(TAG, ex.toString());
+                }
+            }
+        }
+        return null;
+    }
+
+    private ArrayList<LatLng> decodePoly(String encoded) {
+
+        ArrayList<LatLng> poly = new ArrayList<LatLng>();
+        int index = 0, len = encoded.length();
+        int lat = 0, lng = 0;
+
+        while (index < len) {
+            int b, shift = 0, result = 0;
+            do {
+                b = encoded.charAt(index++) - 63;
+                result |= (b & 0x1f) << shift;
+                shift += 5;
+            } while (b >= 0x20);
+            int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+            lat += dlat;
+
+            shift = 0;
+            result = 0;
+            do {
+                b = encoded.charAt(index++) - 63;
+                result |= (b & 0x1f) << shift;
+                shift += 5;
+            } while (b >= 0x20);
+            int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+            lng += dlng;
+
+            LatLng p = new LatLng((((double) lat / 1E5)),
+                    (((double) lng / 1E5)));
+            poly.add(p);
+        }
+
+        return poly;
+    }
+
+    private void showPlanResults(){
+        TextView mode_txt = (TextView) findViewById(R.id.mode_text);
+        Button start_button = (Button) findViewById(R.id.start_button);
+        Button waypoint_button = (Button) findViewById(R.id.waypoint_button);
+        Button end_button = (Button) findViewById(R.id.end_button);
+        Button go_button = (Button) findViewById(R.id.go_button);
+
+        start_button.setVisibility(View.INVISIBLE);
+        end_button.setVisibility(View.INVISIBLE);
+        waypoint_button.setVisibility(View.INVISIBLE);
+        go_button.setText("Reset");
+        calcSimilarRoutes();
+        String modeText = "Planned Distance: " + distance_planned + " meters\n";
+        if(sim_routes.size() == 0){
+            modeText+= "Number of similar previous routes: 0\nComplete and store more routes of this length to compare in future";
+        }else{
+            modeText+= "Number of similar previous routes: " + sim_routes.size();
+            RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
+            Button simViewButton = (Button) findViewById(R.id.simViewButton);
+            simViewButton.setVisibility(View.VISIBLE);
+        }
+        mode_txt.setText(modeText);
+
+    }
+    private void calcSimilarRoutes(){
+        sim_routes = new ArrayList<>();
+        SharedPreferences prefs = getSharedPreferences("MyPrefs", Context.MODE_PRIVATE);
+        Map<String, ?> map = prefs.getAll();
+        TreeMap<String, ?> sortedMap = new TreeMap<>(map);
+        for (String name : sortedMap.descendingKeySet()) {
+            if(!name.equals("user")){
+                String rtPath = prefs.getString(name,"");
+                smallRouteSummary temp = new smallRouteSummary(loadsmallRouteFromFile(rtPath));
+                double percentage = Math.abs(temp.totalDistance - distance_planned)/temp.totalDistance;
+                if(percentage < .05){
+                    sim_routes.add(temp);
+                }
+            }
+        }
+        Log.d(TAG, sim_routes.size() + "");
+    }
+
+    private String loadsmallRouteFromFile(String path){
+        String ret = "";
+
+        try {
+            InputStream inputStream = openFileInput(path + "s");
+
+            if ( inputStream != null ) {
+                InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
+                BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+                String receiveString = "";
+                StringBuilder stringBuilder = new StringBuilder();
+
+                while ( (receiveString = bufferedReader.readLine()) != null ) {
+                    stringBuilder.append(receiveString);
+                }
+
+                inputStream.close();
+                ret = stringBuilder.toString();
+            }
+        }
+        catch (FileNotFoundException e) {
+            Log.e("login activity", "File not found: " + e.toString());
+        } catch (IOException e) {
+            Log.e("login activity", "Can not read file: " + e.toString());
+        }
+
+        return ret;
+    }
+    public void simRouteListClick(View v){
+        TextView temp = (TextView) v;
+        String name = temp.getTag().toString();
+        //routeSummary sum = new routeSummary(prefs.getString(name, ""));
+        //Log.d(TAG,sum.toString());
+        Intent prevIntent = new Intent(this, PrevRouteActivity.class);
+        prevIntent.putExtra("routeName",name);
+        startActivity(prevIntent);
+    }
+
+    public void simRoutesClick(){
+        Globals.sL = sim_routes;
+        Intent simIntent = new Intent(this, simList.class);
+        startActivity(simIntent);
+    }
+
 }
+
+

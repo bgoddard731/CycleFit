@@ -250,18 +250,18 @@ public class MapsActivity extends FragmentActivity implements
             mMap.clear();
             TextView resultText = (TextView) findViewById(R.id.result_text);
             resultText.setText("Tracking in Progress\nCurrent Distance Traveled: 0m\nCurrent Estimated Speed: 0m/s");
-            LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
+//            LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
             start_time = SystemClock.elapsedRealtimeNanos();
             rt.start = new Date();
             running = true;
             //Debug
-//            debugRouteGenerator test = new debugRouteGenerator();
-//            rt = test.genRT;
-//            for(routeNode n: rt.points){
-//                routepoints.add(n.loc);
-//            }
-//            Polyline route = mMap.addPolyline(new PolylineOptions());
-//            route.setPoints(routepoints);
+            debugRouteGenerator test = new debugRouteGenerator();
+            rt = test.genRT;
+            for(routeNode n: rt.points){
+                routepoints.add(n.loc);
+            }
+            Polyline route = mMap.addPolyline(new PolylineOptions());
+            route.setPoints(routepoints);
         }
     }
     private void stopButtonClick(){
@@ -281,17 +281,17 @@ public class MapsActivity extends FragmentActivity implements
             saveRouteInfo();
         }else if(running){
             //Debug
-            rt.end = new Date();
+//            rt.end = new Date();
             //Calculate summary data
             double route_time = (stop_time - start_time)/1000000000;
-            rt.elapsedTime = route_time;
-            rt.totalDistance = distance_traveled;
+//            rt.elapsedTime = route_time;
+//            rt.totalDistance = distance_traveled;
            double avg_speed = distance_traveled / route_time;
 
             if(distance_traveled == 0 || route_time == 0) {
                 avg_speed = 0;
             }
-            rt.avgSpeed = avg_speed;
+//            rt.avgSpeed = avg_speed;
             TextView resultText = (TextView) findViewById(R.id.result_text);
             resultText.setText(String.format("Route Ended:\nTotal Distance Traveled: %1$.2fm\nTotal time: %2$.2fsec\n Average Speed: %3$.2fm/s", distance_traveled, route_time, avg_speed));
             //Log.d(TAG, rt.toString());
@@ -360,6 +360,16 @@ public class MapsActivity extends FragmentActivity implements
 
     public void saveRouteToFile(){
         ContextWrapper cw = new ContextWrapper(getApplicationContext());
+        //Save short
+        try {
+            OutputStreamWriter outputStreamWriter = new OutputStreamWriter(cw.openFileOutput(rt.end.getTime()+".txts", Context.MODE_PRIVATE));
+            outputStreamWriter.write(rt.shortToString());
+            outputStreamWriter.close();
+        }
+        catch (IOException e) {
+            Log.e("Exception", "File write failed: " + e.toString());
+        }
+        //Save long
         try {
             OutputStreamWriter outputStreamWriter = new OutputStreamWriter(cw.openFileOutput(rt.end.getTime()+".txt", Context.MODE_PRIVATE));
             outputStreamWriter.write(rt.toString());

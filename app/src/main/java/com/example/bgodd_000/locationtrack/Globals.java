@@ -1,5 +1,6 @@
 package com.example.bgodd_000.locationtrack;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -7,4 +8,5 @@ import java.util.List;
  */
 public class Globals {
     public static routeSummary summary;
+    public static ArrayList<smallRouteSummary> sL;
 }

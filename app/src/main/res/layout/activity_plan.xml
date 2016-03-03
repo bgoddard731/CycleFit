@@ -3,6 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:tag="plan_view"
+    android:id="@+id/plan_layout"
     tools:context="com.example.bgodd_000.locationtrack.PlanActivity"
     android:visibility="visible">
 
@@ -55,5 +57,14 @@
         android:id="@+id/go_button"
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true" />
+
+    <Button
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="View Similar Routes"
+        android:id="@+id/simViewButton"
+        android:layout_above="@+id/go_button"
+        android:layout_centerHorizontal="true"
+        android:visibility="invisible" />
 
 </RelativeLayout>

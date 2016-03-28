@@ -62,15 +62,19 @@ public class PlanActivity extends FragmentActivity implements
     private GoogleMap mMap;
     //Connects device to Google Play services used to display location and map
     private GoogleApiClient mGoogleApiClient;
+    //Globals to track markers placed on the map by user
     private Marker start;
     private Marker end;
     private ArrayList<Marker> waypoints;
+    //List of points to be returned by directions request
     private ArrayList<LatLng> routepoints = new ArrayList<>();
+    //Lists that store routes that match the planned route
     private ArrayList<smallRouteSummary> sim_routes;
+    private ArrayList<smallRouteSummary> rev_sim_routes;
+    private boolean use_rev = false;
     private long distance_planned;
+    //Tracks whether the user is placing start, end, waypoints, or viewing a summary
     private int mode;
-    private String currentView;
-    //Stores the list of points along the route
     //Tag for Debugging
     public static final String TAG = MapsActivity.class.getSimpleName();
     private final static int CONNECTION_FAILURE_RES_REQUEST = 9000; //9 seconds to connection failure
@@ -79,6 +83,7 @@ public class PlanActivity extends FragmentActivity implements
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_plan);
+        //Set up map fragment
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.plan_map);
         mGoogleApiClient = new GoogleApiClient.Builder(this)
@@ -87,12 +92,13 @@ public class PlanActivity extends FragmentActivity implements
                 .addApi(LocationServices.API)
                 .build();
         waypoints = new ArrayList<>();
-        mode = 0;
+        mode = 0; //Start placements
+        //Initialize
         setModeText();
         setPlanEventListeners();
 
     }
-
+    //Add all the on click listeners
     public void setPlanEventListeners(){
         Button start_button = (Button) findViewById(R.id.start_button);
         start_button.setOnClickListener(new View.OnClickListener() {
@@ -156,7 +162,9 @@ public class PlanActivity extends FragmentActivity implements
 
     @Override
     public void onConnected(Bundle bundle) {
+        //Center camera on current location, and place start marker there by default
         Location loc = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+        //set map and marker click listeners
         mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
             @Override
             public void onMapClick(LatLng latLng) {
@@ -202,30 +210,30 @@ public class PlanActivity extends FragmentActivity implements
             Log.i(TAG, "Location services failed with code: " + connectionResult.getErrorCode());
         }
     }
-
+    //Initialize the prompt based upon the mode
     private void setModeText(){
         TextView mode_txt = (TextView) findViewById(R.id.mode_text);
         Button start_button = (Button) findViewById(R.id.start_button);
         Button waypoint_button = (Button) findViewById(R.id.waypoint_button);
         Button end_button = (Button) findViewById(R.id.end_button);
-        if(mode == 0){
+        if(mode == 0){ //Start marker placement
             start_button.setTextColor(Color.YELLOW);
             waypoint_button.setTextColor(Color.WHITE);
             end_button.setTextColor(Color.WHITE);
             mode_txt.setText("Place Start Marker:\nClick Map to designate route beginning");
-        }else if(mode == 1){
+        }else if(mode == 1){//Waypoint marker placements
             start_button.setTextColor(Color.WHITE);
             waypoint_button.setTextColor(Color.YELLOW);
             end_button.setTextColor(Color.WHITE);
             mode_txt.setText("Place Waypoint Markers (Optional):\nClick points on map to add waypoints to route.\nClick waypoint to remove");
-        }else{
+        }else{//End marker placement
             start_button.setTextColor(Color.WHITE);
             waypoint_button.setTextColor(Color.WHITE);
             end_button.setTextColor(Color.YELLOW);
             mode_txt.setText("Place End Marker:\nClick Map to designate route end");
         }
     }
-
+    //Change modes based on option button clicks
     private void startButtonClick(){
         mode = 0;
         setModeText();
@@ -240,9 +248,10 @@ public class PlanActivity extends FragmentActivity implements
         mode = 2;
         setModeText();
     }
-
+    //map click listener
     private void mapClick(LatLng loc){
         if(mode == 0){
+            //Place a start marker where the click occured
             if(start != null){
                 start.setPosition(loc);
                 start.setSnippet(loc.toString());
@@ -254,6 +263,7 @@ public class PlanActivity extends FragmentActivity implements
                         .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
             }
         }else if(mode == 1){
+            //Place a waypoint marker where the click occured
             Marker temp = mMap.addMarker(new MarkerOptions()
                     .position(loc)
                     .title("Waypoint")
@@ -261,6 +271,7 @@ public class PlanActivity extends FragmentActivity implements
                     .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE)));
             waypoints.add(temp);
         }else if(mode == 2){
+            //Place end marker on the click
             if(end != null){
                 end.setPosition(loc);
                 end.setSnippet(loc.toString());
@@ -278,6 +289,7 @@ public class PlanActivity extends FragmentActivity implements
         if(m.equals(start) || m.equals(end)){
             return false;
         }else if(mode == 1){
+            //Delete a waypoint marker if waypoint mode, and a waypoint marker is clicked
             if(waypoints.contains(m)){
                 waypoints.remove(m);
             }
@@ -287,10 +299,11 @@ public class PlanActivity extends FragmentActivity implements
             return false;
         }
     }
-
+    //Get the directions from google direcitons
     private void goButtonClick(View v){
         Button go_button = (Button) findViewById(R.id.go_button);
         if(go_button.getText().equals("Reset")){
+            //Reset the map and re-initialize the options
             Log.d(TAG,"RESET");
             Button start_button = (Button) findViewById(R.id.start_button);
             Button waypoint_button = (Button) findViewById(R.id.waypoint_button);
@@ -312,19 +325,23 @@ public class PlanActivity extends FragmentActivity implements
         if(start == null || end == null){
             Toast.makeText(getApplicationContext(), "Must Place a Start and End Markers!", Toast.LENGTH_SHORT).show();
         }else{
+            //Get directions and update the modes
             String url = createDirectionsUrl();
-            Log.d(TAG,url);
+            //Log.d(TAG,url);
             mode = 3;
             new JSONconnection().execute(url);
         }
     }
 
     private String createDirectionsUrl(){
+        //Build the JSON request to get directions from Google
         String url = "";
         url += "https://maps.googleapis.com/maps/api/directions/json?";
+        //Start and end
         url += "origin="+start.getPosition().latitude + "," + start.getPosition().longitude;
         url += "&destination=" + end.getPosition().latitude + "," + end.getPosition().longitude;
-        url += "&mode=bicycling";
+        url += "&mode=bicycling"; //Get a bicycle route
+        //Add waypoints
         if(waypoints.size() > 0){
             String waypoint_opts = "&waypoints=optimize:true";
             for(int i = 0; i < waypoints.size(); i++){
@@ -332,10 +349,11 @@ public class PlanActivity extends FragmentActivity implements
             }
             url += waypoint_opts;
         }
+        //Directions API Key
         url+="&key=AIzaSyB_zRbAj1yfngb_APNXfRY1DUhXLrQ6rzI";
         return url;
     }
-
+    //Execute the request asynchronosly
     public class JSONconnection extends AsyncTask<String, Void, String>{
 
         @Override
@@ -346,17 +364,20 @@ public class PlanActivity extends FragmentActivity implements
         // onPostExecute displays the results of the AsyncTask.
         @Override
         protected void onPostExecute(String result) {
-            //Log.d(TAG,result);
+           // Log.d(TAG,result);
             try {
                 //Parse Results
+                //Get the routepoint list
                 JSONObject res = new JSONObject(result);
                 JSONArray routes = res.getJSONArray("routes");
                 JSONObject route = routes.getJSONObject(0);
                 JSONObject overviewPolylines = route.getJSONObject("overview_polyline");
                 String encodedString = overviewPolylines.getString("points");
                 routepoints = decodePoly(encodedString);
+                //Add route to map
                 Polyline dirs = mMap.addPolyline(new PolylineOptions());
                 dirs.setPoints(routepoints);
+                //Get distance from route
                 JSONArray legs = route.getJSONArray("legs");
                 JSONObject leg = legs.getJSONObject(0);
                 JSONObject distance = leg.getJSONObject("distance");
@@ -368,6 +389,7 @@ public class PlanActivity extends FragmentActivity implements
             }
         }
     }
+    //Perform the url GET Request to the server
     public String getJSON(String url, int timeout) {
         HttpURLConnection c = null;
         try {
@@ -410,7 +432,7 @@ public class PlanActivity extends FragmentActivity implements
         }
         return null;
     }
-
+    //Optained from Google, decodes a polyline from encoded mode
     private ArrayList<LatLng> decodePoly(String encoded) {
 
         ArrayList<LatLng> poly = new ArrayList<LatLng>();
@@ -444,33 +466,41 @@ public class PlanActivity extends FragmentActivity implements
 
         return poly;
     }
-
+    //Update to show results of the plan request and comparison to stored routes
     private void showPlanResults(){
         TextView mode_txt = (TextView) findViewById(R.id.mode_text);
         Button start_button = (Button) findViewById(R.id.start_button);
         Button waypoint_button = (Button) findViewById(R.id.waypoint_button);
         Button end_button = (Button) findViewById(R.id.end_button);
         Button go_button = (Button) findViewById(R.id.go_button);
-
+        //Update visibility
         start_button.setVisibility(View.INVISIBLE);
         end_button.setVisibility(View.INVISIBLE);
         waypoint_button.setVisibility(View.INVISIBLE);
         go_button.setText("Reset");
         calcSimilarRoutes();
-        String modeText = "Planned Distance: " + distance_planned + " meters\n";
-        if(sim_routes.size() == 0){
-            modeText+= "Number of similar previous routes: 0\nComplete and store more routes of this length to compare in future";
-        }else{
-            modeText+= "Number of similar previous routes: " + sim_routes.size();
-            RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
+        String modeText = "";
+        //Route not traveled before
+        if(sim_routes.size() == 0 && rev_sim_routes.size()==0){
+            modeText+= "This route has not been traveled before.\nComplete and store this route more times to compare in the future.";
+        //Route traveled before
+        }else if(sim_routes.size() > 0){
+            modeText += calcPredText(false);
             Button simViewButton = (Button) findViewById(R.id.simViewButton);
             simViewButton.setVisibility(View.VISIBLE);
+        //Route traveled in reverse before
+        }else{
+            modeText += calcPredText(true);
+            Button simViewButton = (Button) findViewById(R.id.simViewButton);
+            simViewButton.setVisibility(View.VISIBLE);
+            use_rev = true;
         }
         mode_txt.setText(modeText);
-
     }
+    //Calc all similar forward and reverse routes that match
     private void calcSimilarRoutes(){
         sim_routes = new ArrayList<>();
+        rev_sim_routes = new ArrayList<>();
         SharedPreferences prefs = getSharedPreferences("MyPrefs", Context.MODE_PRIVATE);
         Map<String, ?> map = prefs.getAll();
         TreeMap<String, ?> sortedMap = new TreeMap<>(map);
@@ -479,14 +509,32 @@ public class PlanActivity extends FragmentActivity implements
                 String rtPath = prefs.getString(name,"");
                 smallRouteSummary temp = new smallRouteSummary(loadsmallRouteFromFile(rtPath));
                 double percentage = Math.abs(temp.totalDistance - distance_planned)/temp.totalDistance;
-                if(percentage < .05){
+                //start point difference
+                float[] res = new float[4];
+                Location.distanceBetween(start.getPosition().latitude,start.getPosition().longitude,temp.startLoc.latitude,temp.startLoc.longitude,res);
+                double start_diff = res[0];
+                //calc end point diff
+                res = new float[4];
+                Location.distanceBetween(end.getPosition().latitude,end.getPosition().longitude,temp.endLoc.latitude,temp.endLoc.longitude,res);
+                double end_diff = res[0];
+                //Calc diff between start and planned end
+                res = new float[4];
+                Location.distanceBetween(start.getPosition().latitude,start.getPosition().longitude,temp.endLoc.latitude,temp.endLoc.longitude,res);
+                double ps_re_diff = res[0];
+                //Calc diff between start and planned end
+                res = new float[4];
+                Location.distanceBetween(end.getPosition().latitude,end.getPosition().longitude,temp.startLoc.latitude,temp.startLoc.longitude,res);
+                double pe_rs_diff = res[0];
+                if((percentage < .05) && (end_diff < 10) && (start_diff<10)){
                     sim_routes.add(temp);
+                }else if((percentage < .05) && (ps_re_diff < 10) && (pe_rs_diff<10)){
+                    rev_sim_routes.add(temp);
                 }
             }
         }
         Log.d(TAG, sim_routes.size() + "");
     }
-
+    //Get route summary from file (only contains averages and start and end, no mid points
     private String loadsmallRouteFromFile(String path){
         String ret = "";
 
@@ -524,11 +572,44 @@ public class PlanActivity extends FragmentActivity implements
         prevIntent.putExtra("routeName",name);
         startActivity(prevIntent);
     }
-
+    //Create list of similar routes to view
     public void simRoutesClick(){
-        Globals.sL = sim_routes;
+        if(use_rev){
+            Globals.sL = rev_sim_routes;
+        }else{
+            Globals.sL = sim_routes;
+        }
+        use_rev = false;
         Intent simIntent = new Intent(this, simList.class);
         startActivity(simIntent);
+    }
+    //Calculate fitness predicitons from previous routes
+    public String calcPredText(boolean use_reverse){
+        String ret = "";
+        if(use_reverse){
+            ret += "Route not traveled in this direction.\nNumber of times this route traveled in reverse: " + rev_sim_routes.size() + "\n";
+            double avgCalBurn = 0;
+            double avgTime = 0;
+            for(smallRouteSummary s : rev_sim_routes){
+                avgCalBurn += s.calorieBurn;
+                avgTime += s.elapsedTime;
+            }
+            avgCalBurn /= rev_sim_routes.size();
+            avgTime /= rev_sim_routes.size();
+            ret += String.format("Average Time Elapsed: %1$.2f sec\nAverage Calorie Burn: %2$.2f cal", avgTime, avgCalBurn);
+        }else{
+            ret += "Number of times this route stored: " + sim_routes.size() + "\n";
+            double avgCalBurn = 0;
+            double avgTime = 0;
+            for(smallRouteSummary s : sim_routes){
+                avgCalBurn += s.calorieBurn;
+                avgTime += s.elapsedTime;
+            }
+            avgCalBurn /= sim_routes.size();
+            avgTime /= sim_routes.size();
+            ret += String.format("Average Time Elapsed: %1$.2f sec\nAverage Calorie Burn: %2$.2f cal", avgTime, avgCalBurn);
+        }
+        return ret;
     }
 
 }

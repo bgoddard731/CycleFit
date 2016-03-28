@@ -40,6 +40,8 @@ package com.example.bgodd_000.locationtrack;
         import java.util.Date;
         import java.util.LinkedList;
         import java.util.List;
+        import java.util.Map;
+        import java.util.TreeMap;
 
 public class PrevRouteActivity extends FragmentActivity implements
         GoogleApiClient.ConnectionCallbacks,
@@ -143,6 +145,13 @@ public class PrevRouteActivity extends FragmentActivity implements
             mMap.moveCamera(CameraUpdateFactory.zoomTo(13));
         }
         Log.d(TAG, "End of Load: " + SystemClock.elapsedRealtimeNanos());
+        new Thread(new Runnable() {
+            public void run() {
+                Log.d(TAG, rt.toString());
+            }
+        }).start();
+
+
     }
     @Override
     public void onConnectionSuspended(int i) {

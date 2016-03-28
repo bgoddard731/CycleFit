@@ -1,5 +1,9 @@
 package com.example.bgodd_000.locationtrack;
 
+import android.location.Location;
+
+import com.google.android.gms.maps.model.LatLng;
+
 import java.util.Date;
 
 /**
@@ -15,6 +19,8 @@ public class smallRouteSummary {
     public double avgIncline;
     public double avgRPM;
     public double calorieBurn;
+    public LatLng startLoc;
+    public LatLng endLoc;
 
     public smallRouteSummary(){
         totalDistance = 0;
@@ -26,10 +32,12 @@ public class smallRouteSummary {
         avgRPM = 0;
         avgSpeed = 0;
         calorieBurn = 0;
+        startLoc = new LatLng(0,0);
+        endLoc = new LatLng(0,0);
     }
 
     public smallRouteSummary(String contents){
-        String[] parts = contents.split(";", 10);
+        String[] parts = contents.split(";", 13);
         totalDistance = Double.parseDouble(parts[0]);
         elapsedTime = Double.parseDouble(parts[1]);
         start = new Date(Long.parseLong(parts[2]));
@@ -39,5 +47,8 @@ public class smallRouteSummary {
         avgSpeed = Double.parseDouble(parts[6]);
         avgRPM = Double.parseDouble(parts[7]);
         calorieBurn = Double.parseDouble(parts[8]);
+        startLoc = new LatLng(Double.parseDouble(parts[9]),Double.parseDouble(parts[10]));
+        endLoc = new LatLng(Double.parseDouble(parts[11]),Double.parseDouble(parts[12]));
+
     }
 }

@@ -78,6 +78,29 @@ public class MainMenuActivity extends AppCompatActivity {
         }else{
             Toast.makeText(getApplicationContext(), "User Must be Initialized for Route Tracking", Toast.LENGTH_SHORT).show();
         }
+        //Debug - used to load routes into memory, change i to set number
+//        debugRouteGenerator test = new debugRouteGenerator();
+//        routeSummary rt = test.genRT;
+//        Log.d(TAG, "Created");
+//        Log.d(TAG, "Start of Storage: " + SystemClock.currentThreadTimeMillis());
+//        String temp = rt.toString();
+//        String temp2 = rt.shortToString();
+//        for(int i = 0; i < 100; i++){
+//            ContextWrapper cw = new ContextWrapper(getApplicationContext());
+//            try {
+//                OutputStreamWriter outputStreamWriter = new OutputStreamWriter(cw.openFileOutput((test.genRT.end.getTime() + i)+".txt", Context.MODE_PRIVATE));
+//                outputStreamWriter.write(temp);
+//                outputStreamWriter.close();
+//                outputStreamWriter = new OutputStreamWriter(cw.openFileOutput((test.genRT.end.getTime() + i)+".txts", Context.MODE_PRIVATE));
+//                outputStreamWriter.write(temp2);
+//                outputStreamWriter.close();
+//            }
+//            catch (IOException e) {
+//                Log.e("Exception", "File write failed: " + e.toString());
+//            }
+//            prefs.edit().putString((test.genRT.end.getTime() + i) + "", (test.genRT.end.getTime() + i) + ".txt").commit();
+//            Log.d(TAG, "After Storage: " + i);
+//        }
 
     }
 
@@ -117,25 +140,7 @@ public class MainMenuActivity extends AppCompatActivity {
         Log.d(TAG, "Plan Route Click");
         Intent plan_intent = new Intent(this, PlanActivity.class);
         startActivity(plan_intent);
-//        Debug
-//        debugRouteGenerator test = new debugRouteGenerator();
-//        routeSummary rt = test.genRT;
-//        Log.d(TAG, "Created");
-//        Log.d(TAG, "Start of Storage: " + SystemClock.currentThreadTimeMillis());
-//        String temp = rt.toString();
-//        for(int i = 0; i < 100; i++){
-//            ContextWrapper cw = new ContextWrapper(getApplicationContext());
-//            try {
-//                OutputStreamWriter outputStreamWriter = new OutputStreamWriter(cw.openFileOutput((test.genRT.end.getTime() + i)+".txt", Context.MODE_PRIVATE));
-//                outputStreamWriter.write(temp);
-//                outputStreamWriter.close();
-//            }
-//            catch (IOException e) {
-//                Log.e("Exception", "File write failed: " + e.toString());
-//            }
-//            prefs.edit().putString((test.genRT.end.getTime() + i) + "", (test.genRT.end.getTime() + i) + ".txt").commit();
-//            Log.d(TAG, "After Storage: " + i);
-//        }
+//
 
 
     }
@@ -224,6 +229,7 @@ public class MainMenuActivity extends AppCompatActivity {
         prefs = getSharedPreferences("MyPrefs", Context.MODE_PRIVATE);
         if(prefs.contains("user")){
             user = new userProfile(prefs.getString("user","Name,true,0,0,0,0,0,0,"));
+            Globals.user = user;
         }else{
             user = new userProfile();
         }
@@ -255,6 +261,9 @@ public class MainMenuActivity extends AppCompatActivity {
 
         EditText lbstxt = (EditText) findViewById(R.id.lbs);
         lbstxt.setText(user.weight + "");
+
+        EditText devTxt = (EditText) findViewById(R.id.deviceNameTxt);
+        devTxt.setText(user.deviceName);
 
         RadioButton maleButton = (RadioButton) findViewById(R.id.male_button);
         RadioButton femaleButton = (RadioButton) findViewById(R.id.female_button);
@@ -368,7 +377,16 @@ public class MainMenuActivity extends AppCompatActivity {
                 user.male = false;
             }
         }
+        EditText devTxt = (EditText) findViewById(R.id.deviceNameTxt);
+        String devName = devTxt.getText().toString();
+        if(devName.equals("")){
+            Toast.makeText(getApplicationContext(), "Must enter the name of the device to initialize App", Toast.LENGTH_SHORT).show();
+            return false;
+        }else{
+            user.deviceName = devName;
+        }
         user.initialized = true;
+        Globals.user = user;
         return true;
     }
     //Get picture from gallery

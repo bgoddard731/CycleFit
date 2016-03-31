@@ -18,8 +18,8 @@
         android:layout_height="wrap_content">
 
         <ImageView
-            android:layout_width="200sp"
-            android:layout_height="200sp"
+            android:layout_width="190sp"
+            android:layout_height="190sp"
             android:src="@drawable/user"
             android:id="@+id/user_prof_pic"
             android:layout_marginBottom="20sp"
@@ -188,4 +188,29 @@
                 android:text="F"/>
         </RadioGroup>
     </RelativeLayout>
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Device Name:"
+            android:id="@+id/textView7"
+            android:layout_centerVertical="true"
+            android:layout_alignParentStart="true"
+            android:layout_marginLeft="10dp" />
+
+        <EditText
+            android:layout_width="600px"
+            android:layout_height="wrap_content"
+            android:id="@+id/deviceNameTxt"
+            android:layout_alignParentBottom="true"
+            android:imeOptions="actionDone"
+            android:singleLine="true"
+            android:layout_toEndOf="@+id/textView7"
+            android:hint="Enter CycleFit Device Name" />
+    </RelativeLayout>
+
 </LinearLayout>

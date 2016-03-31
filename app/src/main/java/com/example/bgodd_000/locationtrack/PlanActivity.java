@@ -325,6 +325,7 @@ public class PlanActivity extends FragmentActivity implements
         if(start == null || end == null){
             Toast.makeText(getApplicationContext(), "Must Place a Start and End Markers!", Toast.LENGTH_SHORT).show();
         }else{
+            Log.d(TAG, "Start of request: " + SystemClock.elapsedRealtimeNanos());
             //Get directions and update the modes
             String url = createDirectionsUrl();
             //Log.d(TAG,url);
@@ -496,6 +497,7 @@ public class PlanActivity extends FragmentActivity implements
             use_rev = true;
         }
         mode_txt.setText(modeText);
+        Log.d(TAG, "End of planning: " + SystemClock.elapsedRealtimeNanos());
     }
     //Calc all similar forward and reverse routes that match
     private void calcSimilarRoutes(){
@@ -525,9 +527,9 @@ public class PlanActivity extends FragmentActivity implements
                 res = new float[4];
                 Location.distanceBetween(end.getPosition().latitude,end.getPosition().longitude,temp.startLoc.latitude,temp.startLoc.longitude,res);
                 double pe_rs_diff = res[0];
-                if((percentage < .05) && (end_diff < 10) && (start_diff<10)){
+                if((percentage < .15) && (end_diff < 30) && (start_diff<30)){
                     sim_routes.add(temp);
-                }else if((percentage < .05) && (ps_re_diff < 10) && (pe_rs_diff<10)){
+                }else if((percentage < .15) && (ps_re_diff < 30) && (pe_rs_diff<30)){
                     rev_sim_routes.add(temp);
                 }
             }

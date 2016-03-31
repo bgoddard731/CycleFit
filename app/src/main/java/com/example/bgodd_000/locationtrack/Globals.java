@@ -9,4 +9,5 @@ import java.util.List;
 public class Globals {
     public static routeSummary summary;
     public static ArrayList<smallRouteSummary> sL;
+    public static userProfile user;
 }

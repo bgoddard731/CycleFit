@@ -4,6 +4,7 @@ import android.content.Context;
 
 import java.io.FileOutputStream;
 
+//Structure to hold user profile information
 public class userProfile {
     public String name, picPath, deviceName;
     public boolean male;
@@ -23,7 +24,7 @@ public class userProfile {
         deviceName = "";
         initialized = false;
     }
-
+    //create from a formated string
     public userProfile(String contents){
         String[] parts = contents.split(",");
         name = parts[0];
@@ -38,6 +39,7 @@ public class userProfile {
         picPath = parts[9];
         initialized = true;
     }
+    //print to a string for storage
     public String toString(){
         return name + "," + male + "," + month + "," + day + "," + year + "," + feet + "," + inches + "," + weight + "," + deviceName + "," + picPath;
     }

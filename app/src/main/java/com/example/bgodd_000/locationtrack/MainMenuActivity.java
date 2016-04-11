@@ -42,13 +42,15 @@ import java.util.TreeMap;
 
 
 public class MainMenuActivity extends AppCompatActivity {
-
+    //Stores user info (height, weight, age, etc)
     private userProfile user;
     private String currentView;
     private SharedPreferences prefs;
 
     public static final String TAG = MapsActivity.class.getSimpleName();
 
+    //Used to override the back button press for staying within the same activity
+    //on return from the list of previous routes or user profile pages (All contained within same activity)
     @Override
     public void setContentView(int layoutResID) {
         View view = getLayoutInflater().inflate(layoutResID, null);
@@ -70,11 +72,15 @@ public class MainMenuActivity extends AppCompatActivity {
         }
     }
 
+    //Called when the track route opiton selected.
+    //Navigates to the track route page
     private void trackRouteClick(View v){
         Log.d(TAG, "Track Route Click");
         if(user.initialized){
+            //User must be initialized to track a route
             Intent mapintent = new Intent(this, MapsActivity.class);
             startActivity(mapintent);
+            Globals.user = user;
         }else{
             Toast.makeText(getApplicationContext(), "User Must be Initialized for Route Tracking", Toast.LENGTH_SHORT).show();
         }
@@ -103,16 +109,18 @@ public class MainMenuActivity extends AppCompatActivity {
 //        }
 
     }
-
+    //Used to navigate to a list of previous routes stored in memory to allow the user to view a previous route
     private void prevRouteClick(View v){
-        Log.d(TAG, "Prev Route Click");
-        Log.d(TAG, "Start of List: " + SystemClock.elapsedRealtimeNanos());
+        //Log.d(TAG, "Prev Route Click");
+        //Log.d(TAG, "Start of List: " + SystemClock.elapsedRealtimeNanos());
+        //Create the list of previous routes
         Map<String, ?> map = prefs.getAll();
         TreeMap<String, ?> sortedMap = new TreeMap<>(map);
+        //Update the view
         setContentView(R.layout.stored_route_list);
         for (String name : sortedMap.descendingKeySet()) {
             if(!name.equals("user")){
-                //LinearLayout.LayoutParams
+                //Add a new element to the list of previous routes
                 LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
                 TextView entry = new TextView(this);
                 entry.setLayoutParams(lp);
@@ -129,23 +137,22 @@ public class MainMenuActivity extends AppCompatActivity {
                 });
             }
         }
-        Log.d(TAG, "End of List: " + SystemClock.elapsedRealtimeNanos());
+        //Debug log time tracking
+        //Log.d(TAG, "End of List: " + SystemClock.elapsedRealtimeNanos());
         //Log.d(TAG, SystemClock.currentThreadTimeMillis()+"");
         //String temp = (String) map.get("test");
         //routeSummary testRT = new routeSummary(temp);
         //Log.d(TAG, testRT.toString());
     }
-
+    //navigate to the plan route page
     private void planRouteClick(View v){
         Log.d(TAG, "Plan Route Click");
         Intent plan_intent = new Intent(this, PlanActivity.class);
         startActivity(plan_intent);
-//
-
-
     }
 
-
+    //Used when the user navigates to the user profile page, sets up the new view
+    //and adds in all the event listners
     private void userProfMainClick(View v){
         Log.d(TAG, "User Prof Main Click");
         setContentView(R.layout.user_profile_menu);
@@ -154,7 +161,7 @@ public class MainMenuActivity extends AppCompatActivity {
         if(user.initialized){
             fillTextFields();
         }
-        //load profile picture
+        //load profile picture if it exists
         if(!user.picPath.equals("blank")){
             ImageView img = (ImageView) findViewById(R.id.user_prof_pic);
             loadImageFromStorage(img, user.picPath);
@@ -162,10 +169,13 @@ public class MainMenuActivity extends AppCompatActivity {
 
 
     }
-    //Return to main menu
+    //Return to main menu from user profile page
+    //must have all fields completed (will be validated
     private void userProfBackToMainClick(){
         Log.d(TAG, "User Prof Back to Main Click");
+        //validate the form
         boolean valid = validateForm();
+        //return and reset event listners if valid
         if(valid){
             setContentView(R.layout.activity_main_menu);
             saveUser();
@@ -234,11 +244,13 @@ public class MainMenuActivity extends AppCompatActivity {
             user = new userProfile();
         }
     }
-
+    //Save the user info into shared preferences
     private void saveUser(){
             prefs.edit().putString("user",user.toString()).commit();
     }
 
+    //If user is already initialized, add the user info to the page when the user navigates to
+    //user profile page
     private void fillTextFields(){
         //Fill the text fields from the user profile
         EditText nametxt = (EditText) findViewById(R.id.username);
@@ -279,12 +291,14 @@ public class MainMenuActivity extends AppCompatActivity {
     private boolean validateForm(){
         EditText nametxt = (EditText) findViewById(R.id.username);
         String name = nametxt.getText().toString();
+        //Name must be filled
         if(name.equals("")){
             Toast.makeText(getApplicationContext(), "Must enter a name", Toast.LENGTH_SHORT).show();
             return false;
         }else{
             user.name = name;
         }
+        //Validate month
         EditText monthtxt = (EditText) findViewById(R.id.month);
         int month = Integer.parseInt(monthtxt.getText().toString());
         if(month < 1 || month > 12){
@@ -293,7 +307,7 @@ public class MainMenuActivity extends AppCompatActivity {
         }else{
             user.month = month;
         }
-
+        //Validate day field
         EditText daytxt = (EditText) findViewById(R.id.day);
         int day = Integer.parseInt(daytxt.getText().toString());
         boolean dayvalid = true;
@@ -327,7 +341,7 @@ public class MainMenuActivity extends AppCompatActivity {
         }else{
             user.day = day;
         }
-
+        //validate year field
         EditText yeartxt = (EditText) findViewById(R.id.year);
         int year = Integer.parseInt(yeartxt.getText().toString());
         if(year < 1900 || year > 2016){
@@ -336,7 +350,7 @@ public class MainMenuActivity extends AppCompatActivity {
         }else{
             user.year = year;
         }
-
+        //validate feet field
         EditText fttxt = (EditText) findViewById(R.id.ft);
         int feet = Integer.parseInt(fttxt.getText().toString());
         if(feet < 0 || feet > 10){
@@ -346,6 +360,7 @@ public class MainMenuActivity extends AppCompatActivity {
             user.feet = feet;
         }
 
+        //validate inches field
         EditText intxt = (EditText) findViewById(R.id.in);
         int inches = Integer.parseInt(intxt.getText().toString());
         if(inches < 0 || inches > 11){
@@ -355,6 +370,7 @@ public class MainMenuActivity extends AppCompatActivity {
             user.inches = inches;
         }
 
+        //validate weight field
         EditText weighttxt = (EditText) findViewById(R.id.lbs);
         int weight = Integer.parseInt(weighttxt.getText().toString());
         if(weight < 0 || weight > 1000){
@@ -364,6 +380,7 @@ public class MainMenuActivity extends AppCompatActivity {
             user.weight = weight;
         }
 
+        //validate male/female buttons
         RadioButton maleButton = (RadioButton) findViewById(R.id.male_button);
         RadioButton femaleButton = (RadioButton) findViewById(R.id.female_button);
 
@@ -377,6 +394,8 @@ public class MainMenuActivity extends AppCompatActivity {
                 user.male = false;
             }
         }
+
+        //Validate device name field
         EditText devTxt = (EditText) findViewById(R.id.deviceNameTxt);
         String devName = devTxt.getText().toString();
         if(devName.equals("")){
@@ -389,6 +408,7 @@ public class MainMenuActivity extends AppCompatActivity {
         Globals.user = user;
         return true;
     }
+
     //Get picture from gallery
     private void setUserPic(){
         Intent intent = new Intent();
@@ -398,7 +418,8 @@ public class MainMenuActivity extends AppCompatActivity {
         // Always show the chooser (if there are multiple options available)
         startActivityForResult(Intent.createChooser(intent, "Select Picture"), 1);
     }
-    //Put it in the picture
+
+    //Put the new user profile picture into the picture field on return from the gallery
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -419,6 +440,7 @@ public class MainMenuActivity extends AppCompatActivity {
             }
         }
     }
+
     //Store Image to internal storage
     private String saveToInternalStorage(Bitmap bitmapImage){
         ContextWrapper cw = new ContextWrapper(getApplicationContext());
@@ -439,6 +461,7 @@ public class MainMenuActivity extends AppCompatActivity {
         return directory.getAbsolutePath();
     }
 
+    //Get an image from local storage to add to Imageview field
     private void loadImageFromStorage(ImageView img, String path) {
 
         try {
@@ -453,7 +476,7 @@ public class MainMenuActivity extends AppCompatActivity {
 
     }
 
-
+    //Pull up the route summary for the route clicked from the list of previous routes
     public void routeListClick(View v){
         TextView temp = (TextView) v;
         String name = temp.getTag().toString();
@@ -465,6 +488,7 @@ public class MainMenuActivity extends AppCompatActivity {
         startActivity(prevIntent);
     }
 
+    //If not on the main menu page, override the back button to return to main menu and not kill activity
     @Override
     public void onBackPressed(){
         if(currentView.equals("user")){

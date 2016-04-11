@@ -9,6 +9,9 @@ import java.util.Date;
 /**
  * Created by bgodd_000 on 2/12/2016.
  */
+
+//Container to hold data for a route in one place.
+//Used primarily to store and load route data from memory to interact with user
 public class routeSummary{
     double totalDistance;
     double elapsedTime;

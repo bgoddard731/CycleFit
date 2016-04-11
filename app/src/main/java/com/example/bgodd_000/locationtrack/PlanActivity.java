@@ -73,8 +73,10 @@ public class PlanActivity extends FragmentActivity implements
     private ArrayList<smallRouteSummary> rev_sim_routes;
     private boolean use_rev = false;
     private long distance_planned;
+
     //Tracks whether the user is placing start, end, waypoints, or viewing a summary
     private int mode;
+
     //Tag for Debugging
     public static final String TAG = MapsActivity.class.getSimpleName();
     private final static int CONNECTION_FAILURE_RES_REQUEST = 9000; //9 seconds to connection failure
@@ -184,7 +186,7 @@ public class PlanActivity extends FragmentActivity implements
             LatLng latLng = new LatLng(currentLat,currentLong);
             mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
             mMap.moveCamera(CameraUpdateFactory.zoomTo(15));
-            //Drop Start marker
+            //Drop Start marker at last known location
             start = mMap.addMarker(new MarkerOptions()
                     .position(latLng)
                     .title("Route Start")
@@ -193,11 +195,13 @@ public class PlanActivity extends FragmentActivity implements
         }
     }
 
+    //Connection no work...
     @Override
     public void onConnectionSuspended(int i) {
         Log.i(TAG, "Location services suspended. Please reconnect.");
     }
 
+    //COuldnt connect to map service
     @Override
     public void onConnectionFailed(ConnectionResult connectionResult) {
         if (connectionResult.hasResolution()) {
@@ -210,7 +214,8 @@ public class PlanActivity extends FragmentActivity implements
             Log.i(TAG, "Location services failed with code: " + connectionResult.getErrorCode());
         }
     }
-    //Initialize the prompt based upon the mode
+
+    //Initialize the user prompt based upon the mode
     private void setModeText(){
         TextView mode_txt = (TextView) findViewById(R.id.mode_text);
         Button start_button = (Button) findViewById(R.id.start_button);
@@ -234,6 +239,7 @@ public class PlanActivity extends FragmentActivity implements
         }
     }
     //Change modes based on option button clicks
+    //And re initialize prompt
     private void startButtonClick(){
         mode = 0;
         setModeText();
@@ -248,10 +254,11 @@ public class PlanActivity extends FragmentActivity implements
         mode = 2;
         setModeText();
     }
-    //map click listener
+
+    //map click listener, used to drop markers for route planning
     private void mapClick(LatLng loc){
         if(mode == 0){
-            //Place a start marker where the click occured
+            //Place a start marker where the click occurred
             if(start != null){
                 start.setPosition(loc);
                 start.setSnippet(loc.toString());
@@ -263,7 +270,7 @@ public class PlanActivity extends FragmentActivity implements
                         .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
             }
         }else if(mode == 1){
-            //Place a waypoint marker where the click occured
+            //Place a waypoint marker where the click occurred
             Marker temp = mMap.addMarker(new MarkerOptions()
                     .position(loc)
                     .title("Waypoint")
@@ -285,6 +292,7 @@ public class PlanActivity extends FragmentActivity implements
         }
     }
 
+    //If a waypoint marker is clicked during waypoint edit mode, remove the marker
     private boolean markerClick(Marker m){
         if(m.equals(start) || m.equals(end)){
             return false;
@@ -299,7 +307,9 @@ public class PlanActivity extends FragmentActivity implements
             return false;
         }
     }
+
     //Get the directions from google direcitons
+    //Go button becomes reset button after go is pressed, so reset re-initializes the map
     private void goButtonClick(View v){
         Button go_button = (Button) findViewById(R.id.go_button);
         if(go_button.getText().equals("Reset")){
@@ -322,9 +332,12 @@ public class PlanActivity extends FragmentActivity implements
             setModeText();
             return;
         }
+        //Not in reset mode: get the directions
         if(start == null || end == null){
+            //Must have start and end to get directions
             Toast.makeText(getApplicationContext(), "Must Place a Start and End Markers!", Toast.LENGTH_SHORT).show();
         }else{
+            //Get the directions from a GET server request
             Log.d(TAG, "Start of request: " + SystemClock.elapsedRealtimeNanos());
             //Get directions and update the modes
             String url = createDirectionsUrl();
@@ -334,6 +347,7 @@ public class PlanActivity extends FragmentActivity implements
         }
     }
 
+    //Put together the url request string to send to the API for direcitons
     private String createDirectionsUrl(){
         //Build the JSON request to get directions from Google
         String url = "";
@@ -342,7 +356,7 @@ public class PlanActivity extends FragmentActivity implements
         url += "origin="+start.getPosition().latitude + "," + start.getPosition().longitude;
         url += "&destination=" + end.getPosition().latitude + "," + end.getPosition().longitude;
         url += "&mode=bicycling"; //Get a bicycle route
-        //Add waypoints
+        //Add waypoints if they exist
         if(waypoints.size() > 0){
             String waypoint_opts = "&waypoints=optimize:true";
             for(int i = 0; i < waypoints.size(); i++){
@@ -350,11 +364,12 @@ public class PlanActivity extends FragmentActivity implements
             }
             url += waypoint_opts;
         }
-        //Directions API Key
+        // add the Directions API Key
         url+="&key=AIzaSyB_zRbAj1yfngb_APNXfRY1DUhXLrQ6rzI";
         return url;
     }
-    //Execute the request asynchronosly
+
+    //Execute the request for direcitons asynchronosly
     public class JSONconnection extends AsyncTask<String, Void, String>{
 
         @Override
@@ -363,6 +378,7 @@ public class PlanActivity extends FragmentActivity implements
         }
 
         // onPostExecute displays the results of the AsyncTask.
+        //The format for the return value for the request found at: https://developers.google.com/maps/documentation/directions/intro#Introduction
         @Override
         protected void onPostExecute(String result) {
            // Log.d(TAG,result);
@@ -375,9 +391,11 @@ public class PlanActivity extends FragmentActivity implements
                 JSONObject overviewPolylines = route.getJSONObject("overview_polyline");
                 String encodedString = overviewPolylines.getString("points");
                 routepoints = decodePoly(encodedString);
+
                 //Add route to map
                 Polyline dirs = mMap.addPolyline(new PolylineOptions());
                 dirs.setPoints(routepoints);
+
                 //Get distance from route
                 JSONArray legs = route.getJSONArray("legs");
                 JSONObject leg = legs.getJSONObject(0);
@@ -404,10 +422,11 @@ public class PlanActivity extends FragmentActivity implements
             c.setReadTimeout(timeout);
             c.connect();
             int status = c.getResponseCode();
-
+            //Parse the result
             switch (status) {
                 case 200:
                 case 201:
+                    //Good results, parse the bytes into a string to send to onPostExecute
                     BufferedReader br = new BufferedReader(new InputStreamReader(c.getInputStream()));
                     StringBuilder sb = new StringBuilder();
                     String line;
@@ -417,7 +436,7 @@ public class PlanActivity extends FragmentActivity implements
                     br.close();
                     return sb.toString();
             }
-
+        //Otherwise its bad and catch the exceptions
         } catch (MalformedURLException ex) {
             Log.d(TAG, ex.toString());
         } catch (IOException ex) {
@@ -467,6 +486,7 @@ public class PlanActivity extends FragmentActivity implements
 
         return poly;
     }
+
     //Update to show results of the plan request and comparison to stored routes
     private void showPlanResults(){
         TextView mode_txt = (TextView) findViewById(R.id.mode_text);
@@ -479,8 +499,9 @@ public class PlanActivity extends FragmentActivity implements
         end_button.setVisibility(View.INVISIBLE);
         waypoint_button.setVisibility(View.INVISIBLE);
         go_button.setText("Reset");
-        calcSimilarRoutes();
+        calcSimilarRoutes();//calculate the routes that match
         String modeText = "";
+
         //Route not traveled before
         if(sim_routes.size() == 0 && rev_sim_routes.size()==0){
             modeText+= "This route has not been traveled before.\nComplete and store this route more times to compare in the future.";
@@ -499,7 +520,8 @@ public class PlanActivity extends FragmentActivity implements
         mode_txt.setText(modeText);
         Log.d(TAG, "End of planning: " + SystemClock.elapsedRealtimeNanos());
     }
-    //Calc all similar forward and reverse routes that match
+
+    //Calc all similar forward and reverse routes that match the returned route
     private void calcSimilarRoutes(){
         sim_routes = new ArrayList<>();
         rev_sim_routes = new ArrayList<>();
@@ -527,16 +549,17 @@ public class PlanActivity extends FragmentActivity implements
                 res = new float[4];
                 Location.distanceBetween(end.getPosition().latitude,end.getPosition().longitude,temp.startLoc.latitude,temp.startLoc.longitude,res);
                 double pe_rs_diff = res[0];
-                if((percentage < .15) && (end_diff < 30) && (start_diff<30)){
+                if((percentage < .15) && (end_diff < 40) && (start_diff<40)){
                     sim_routes.add(temp);
-                }else if((percentage < .15) && (ps_re_diff < 30) && (pe_rs_diff<30)){
+                }else if((percentage < .15) && (ps_re_diff < 40) && (pe_rs_diff<40)){
                     rev_sim_routes.add(temp);
                 }
             }
         }
         Log.d(TAG, sim_routes.size() + "");
     }
-    //Get route summary from file (only contains averages and start and end, no mid points
+
+    //Get route summary from file (only contains averages and start and end, no mid points)
     private String loadsmallRouteFromFile(String path){
         String ret = "";
 
@@ -565,15 +588,15 @@ public class PlanActivity extends FragmentActivity implements
 
         return ret;
     }
-    public void simRouteListClick(View v){
-        TextView temp = (TextView) v;
-        String name = temp.getTag().toString();
-        //routeSummary sum = new routeSummary(prefs.getString(name, ""));
-        //Log.d(TAG,sum.toString());
-        Intent prevIntent = new Intent(this, PrevRouteActivity.class);
-        prevIntent.putExtra("routeName",name);
-        startActivity(prevIntent);
-    }
+//    public void simRouteListClick(View v){
+//        TextView temp = (TextView) v;
+//        String name = temp.getTag().toString();
+//        //routeSummary sum = new routeSummary(prefs.getString(name, ""));
+//        //Log.d(TAG,sum.toString());
+//        Intent prevIntent = new Intent(this, PrevRouteActivity.class);
+//        prevIntent.putExtra("routeName",name);
+//        startActivity(prevIntent);
+//    }
     //Create list of similar routes to view
     public void simRoutesClick(){
         if(use_rev){
@@ -585,10 +608,13 @@ public class PlanActivity extends FragmentActivity implements
         Intent simIntent = new Intent(this, simList.class);
         startActivity(simIntent);
     }
+
     //Calculate fitness predicitons from previous routes
+    //If use_reverse == true, then pull all of the routes from the reverse sim routes list
     public String calcPredText(boolean use_reverse){
         String ret = "";
         if(use_reverse){
+            //Display the average of the previous calorie burns and elapsed time
             ret += "Route not traveled in this direction.\nNumber of times this route traveled in reverse: " + rev_sim_routes.size() + "\n";
             double avgCalBurn = 0;
             double avgTime = 0;
@@ -600,6 +626,7 @@ public class PlanActivity extends FragmentActivity implements
             avgTime /= rev_sim_routes.size();
             ret += String.format("Average Time Elapsed: %1$.2f sec\nAverage Calorie Burn: %2$.2f cal", avgTime, avgCalBurn);
         }else{
+            //Use the forward directions, display average calorie burns and route times
             ret += "Number of times this route stored: " + sim_routes.size() + "\n";
             double avgCalBurn = 0;
             double avgTime = 0;

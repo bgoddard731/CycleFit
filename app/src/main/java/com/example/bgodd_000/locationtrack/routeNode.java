@@ -6,6 +6,8 @@ import com.google.android.gms.maps.model.LatLng;
 /**
  * Created by bgodd_000 on 2/12/2016.
  */
+
+//Structure to hold a point of data along a route
 public class routeNode {
     public int hr;
     public double rpm;

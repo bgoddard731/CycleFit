@@ -11,6 +11,8 @@ import android.widget.TextView;
 import java.util.ArrayList;
 import java.util.Date;
 
+//Simple activity that only contains list of previous routes that match a planned route
+//Each Item can be clicked to pull up that route summary
 public class simList extends AppCompatActivity {
 
     private ArrayList<smallRouteSummary> sim_routes;
@@ -18,10 +20,12 @@ public class simList extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_sim_list);
+        //Get list of routes from globals and initialize the list of roues
         sim_routes = Globals.sL;
         initializeView();
     }
 
+    //On a route click, pull up the route summary page
     public void simRouteListClick(View v){
         TextView temp = (TextView) v;
         String name = temp.getTag().toString();
@@ -30,6 +34,7 @@ public class simList extends AppCompatActivity {
         startActivity(prevIntent);
     }
 
+    //Add all the routes to the list
     public void initializeView(){
         for (smallRouteSummary s : sim_routes) {
             //LinearLayout.LayoutParams

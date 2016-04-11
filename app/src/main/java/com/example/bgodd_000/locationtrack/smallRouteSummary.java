@@ -9,6 +9,9 @@ import java.util.Date;
 /**
  * Created by bgodd_000 on 3/2/2016.
  */
+
+//Structure to hold route summary information. COntaines overall route summary data points, the start
+//and end location, but none of the midpoint data
 public class smallRouteSummary {
     double totalDistance;
     double elapsedTime;

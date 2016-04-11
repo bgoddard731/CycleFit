@@ -64,7 +64,9 @@ public class MapsActivity extends FragmentActivity implements
     int DEFALUT_HR = 80;
     double DEFALUT_RPM = 60;
     double DEFAULT_INCLINE = 0;
-    int MAXROUTES = 3;
+
+    //Sets the maximum number of routes stored in memory at 1 time
+    int MAXROUTES = 100;
 
 
     //Object to model the map presented by the fragment
@@ -82,6 +84,7 @@ public class MapsActivity extends FragmentActivity implements
     private Location prev_loc;
     private boolean running = false;
     private boolean saveOptions = false;
+    //Route summary object that will allow a route to be stored
     private routeSummary rt = new routeSummary();
 
     //Bluetooth connection variables
@@ -90,12 +93,13 @@ public class MapsActivity extends FragmentActivity implements
     private BluetoothDevice cfDevice;
     private BluetoothSocket btSocket;
     private int REQUEST_ENABLE_BT = 1;
-    final byte delimiter = 10;
+    final byte delimiter = 10; //ASCII value for newline char, used to end BT transmission packet
     int readBufferPosition = 0;
     private Handler btHandler;
-    private int prevHR = 0;
+    private int prevHR = 80;
     private int prevRPM = 0;
     private double prevInc = 0;
+    private int HRInitCounter = 0;
 
     //Connects device to Google Play services used to display location and map
     private GoogleApiClient mGoogleApiClient;
@@ -141,7 +145,7 @@ public class MapsActivity extends FragmentActivity implements
             }
         });
 
-        //Connect to bluetooth device
+        //Connect to bluetooth device for sensor monitoring
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (mBluetoothAdapter == null) {
             // Device does not support Bluetooth
@@ -152,6 +156,7 @@ public class MapsActivity extends FragmentActivity implements
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableBtIntent,REQUEST_ENABLE_BT);
         }else{
+            //Make device connection
            connectCFDevice();
         }
 
@@ -162,9 +167,11 @@ public class MapsActivity extends FragmentActivity implements
         //called after onStart or if activity is moved from background to foreground
         super.onResume();
         setUpMapIfNeeded();
+        //Reconnect map if not connected
         if(!mGoogleApiClient.isConnected()){
             mGoogleApiClient.connect();
         }
+        //Reconnect btSocket if not connected
         if(btSocket != null){
             if(!btSocket.isConnected()){
                 connectCFDevice();
@@ -187,6 +194,7 @@ public class MapsActivity extends FragmentActivity implements
         mMap.setMyLocationEnabled(true);
     }
 
+    //Map connection to API services completed
     @Override
     public void onConnected(Bundle bundle) {
         //Pull last known location for map initialization
@@ -225,6 +233,8 @@ public class MapsActivity extends FragmentActivity implements
             mMap.clear();
             //Make new lat lang from the location
             LatLng latLng = new LatLng(currentLat,currentLong);
+            //Center camera on user's current location
+            mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
             routepoints.add(latLng); //Add to global list
             //Update and redraw the polyline
             Polyline route = mMap.addPolyline(new PolylineOptions());
@@ -251,14 +261,20 @@ public class MapsActivity extends FragmentActivity implements
 
         //update the display
         final TextView resultText = (TextView) findViewById(R.id.result_text);
-        resultText.setText(String.format("Tracking in Progress:\nCurrent Distance Traveled: %1$.2fm\nCurrent Estimated Speed: %2$.2fm/s", distance_traveled, curr_speed));
+        resultText.setText(String.format("Tracking in Progress:\n" +
+                "Current Distance Traveled: %.2fm\n" +
+                "Current Estimated Speed: %.2f m/s\n" +
+                "Current Incline: %.2f degrees\n" +
+                "Current Heart Rate: %4d bpm\n" +
+                "Current Pedal Speed: %d rpm" ,
+                        distance_traveled, curr_speed, prevInc, prevHR, prevRPM));
     }
     //Disconnection from service
     @Override
     public void onConnectionSuspended(int i) {
         Log.i(TAG, "Location services suspended. Please reconnect.");
     }
-    //unable to connect
+    //unable to connect to map
     @Override
     public void onConnectionFailed(ConnectionResult connectionResult) {
         if (connectionResult.hasResolution()){
@@ -271,16 +287,20 @@ public class MapsActivity extends FragmentActivity implements
             Log.i(TAG, "Location services failed with code: " + connectionResult.getErrorCode());
         }
     }
-    //Handle new locations
+    //Handle new location received from API service
     @Override
     public void onLocationChanged(Location location) {
         returnLoc = location;
         //Get sensor reading
         new Thread(new btThread()).start();
+        //handleNewLocation is now called after sensor data is received
+        //To test without the sensor network connection, you must comment out all the bluetooth stuff
+        //and then uncomment the line below, so that the functionality bypasses the bluetooth data connection and requests
         //handleNewLocation(location);
     }
 
     //Start location tracking
+    //This button also doulbes as the discard button at the end of a route
     private void startButtonClick(){
         //If start button is being used as the discard option
         if(saveOptions) {
@@ -294,6 +314,10 @@ public class MapsActivity extends FragmentActivity implements
         }else{
             //Start tracking a route
             mMap.clear();
+            prevInc = 0;
+            prevHR = 0;
+            prevRPM = 0;
+            HRInitCounter = 0;
             rt = new routeSummary();
             TextView resultText = (TextView) findViewById(R.id.result_text);
             resultText.setText("Tracking in Progress\nCurrent Distance Traveled: 0m\nCurrent Estimated Speed: 0m/s");
@@ -301,7 +325,7 @@ public class MapsActivity extends FragmentActivity implements
             start_time = SystemClock.elapsedRealtimeNanos();
             rt.start = new Date();
             running = true;
-            //Debug
+            //Debug - used to put in an autogenerated route instead of tracking a real one for testing purposes
 //            debugRouteGenerator test = new debugRouteGenerator();
 //            rt = test.genRT;
 //            for(routeNode n: rt.points){
@@ -311,7 +335,10 @@ public class MapsActivity extends FragmentActivity implements
 //            route.setPoints(routepoints);
         }
     }
+    //Stop tracking a route
+    //This button also doubles as the save button after the end of a route
     private void stopButtonClick(){
+        //Get end of route time
         double stop_time = SystemClock.elapsedRealtimeNanos();
         if(mGoogleApiClient.isConnected()){
             //Stop tracking location
@@ -334,7 +361,7 @@ public class MapsActivity extends FragmentActivity implements
             rt.elapsedTime = route_time;
             rt.totalDistance = distance_traveled;
            double avg_speed = distance_traveled / route_time;
-
+            //avoid a divide by zero
             if(distance_traveled == 0 || route_time == 0) {
                 avg_speed = 0;
             }
@@ -342,6 +369,7 @@ public class MapsActivity extends FragmentActivity implements
             TextView resultText = (TextView) findViewById(R.id.result_text);
             resultText.setText(String.format("Route Ended:\nTotal Distance Traveled: %1$.2fm\nTotal time: %2$.2fsec\n Average Speed: %3$.2fm/s", distance_traveled, route_time, avg_speed));
             //Log.d(TAG, rt.toString());
+
             //reset the global data
             distance_traveled = 0;
             start_time = 0;
@@ -351,6 +379,7 @@ public class MapsActivity extends FragmentActivity implements
                 speeds[i] = 0;
             }
             prev_loc = null;
+
             //Set up save/discard option
             running = false;
             saveOptions = true;
@@ -361,25 +390,37 @@ public class MapsActivity extends FragmentActivity implements
         }
 
     }
+    //Save route data to memory and pull up the route summary page
     public void saveRouteInfo(){
-
+        //calculate avgHR, RPM, Incline, and calorie burn
         int avgHR = 0;
         double avgInc = 0;
         double avgRPM = 0;
-        for(routeNode n: rt.points){
-            avgHR += n.hr;
-            avgInc += n.incline;
-            avgRPM += n.rpm;
+        if(rt.points.size() > 0){
+            for(routeNode n: rt.points){
+                avgHR += n.hr;
+                avgInc += n.incline;
+                avgRPM += n.rpm;
+            }
+            avgHR /= rt.points.size();
+            avgInc /= rt.points.size();
+            avgRPM /= rt.points.size();
         }
-        avgHR /= rt.points.size();
-        avgInc /= rt.points.size();
-        avgRPM /= rt.points.size();
-
         rt.avgHR = avgHR;
         rt.avgIncline = avgInc;
         rt.avgRPM = avgRPM;
+        userProfile curr_user = Globals.user;
+        //Calorie burn calculations:
+        if(curr_user.male){
+            double mins = rt.elapsedTime/60;
+            int years = rt.end.getYear()-curr_user.year;
+            rt.calorieBurn = (years*.2017 - curr_user.weight*.09036 + (avgHR*.6309 - 55.0969)*mins)/4.184;
+        }else{
+            double mins = rt.elapsedTime/60;
+            int years = rt.end.getYear()-curr_user.year;
+            rt.calorieBurn = (years*.074 - curr_user.weight*.05741 + (avgHR*.4472 - 22.4022)*mins)/4.184;
+        }
 
-        rt.calorieBurn = 150;
 
         //save the route;
         Log.d(TAG, "Start of save: " + SystemClock.elapsedRealtimeNanos());
@@ -389,7 +430,9 @@ public class MapsActivity extends FragmentActivity implements
         new Thread(new Runnable() {
             public void run() {
                 SharedPreferences prefs = getSharedPreferences("MyPrefs", Context.MODE_PRIVATE);
+                //Write the data to text files
                 saveRouteToFile();
+                //Store the file name in shared preferences
                 prefs.edit().putString("" + rt.end.getTime(), rt.end.getTime()+".txt").apply();
                 Map<String, ?> map = prefs.getAll();
                 //Delete a route if number exceeds maximum stored
@@ -397,17 +440,22 @@ public class MapsActivity extends FragmentActivity implements
                     TreeMap<String,?> sortedMap= new TreeMap<>(map);
                     String name = sortedMap.firstKey();
                     String path = (String) sortedMap.get(name);
+                    //Delete full route data
                     deleteRouteFile(path);
+                    //Delete short summary
+                    deleteRouteFile(path+"s");
                     prefs.edit().remove(name).apply();
                 }
             }
         }).start();
+
         //Set up a previous route summary
         Intent prevIntent = new Intent(this, PrevRouteActivity.class);
         prevIntent.putExtra("routeName", name);
         Globals.summary = rt;
         prevIntent.putExtra("fromTrack", true);
         startActivity(prevIntent);
+        //Close the btSocket
         if(btSocket.isConnected()){
             try {
                 btSocket.close();
@@ -421,13 +469,20 @@ public class MapsActivity extends FragmentActivity implements
         resultText.setText("New Route\nDistance Traveled: 0m/s");
 
     }
+    //Reset info and discard the previous route tracked
     private void discardRouteInfo(){
         rt = new routeSummary();
         mMap.clear();
+        prevInc = 0;
+        prevHR = 0;
+        prevRPM = 0;
+        HRInitCounter = 0;
         TextView resultText = (TextView) findViewById(R.id.result_text);
         resultText.setText("New Route\nDistance Traveled: 0m/s");
     }
 
+    //Print out the route data to a text file
+    //Prints out full version and summary version used in route planning functionality
     public void saveRouteToFile(){
         ContextWrapper cw = new ContextWrapper(getApplicationContext());
         //Save short summary for planning
@@ -450,11 +505,12 @@ public class MapsActivity extends FragmentActivity implements
         }
     }
 
+    //delete file from memory
     public void deleteRouteFile(String path){
         File file = new File(path);
         boolean deleted = file.delete();
     }
-
+    //Open socket to the sensor MCU
     private void connectCFDevice(){
         pairedDevices = mBluetoothAdapter.getBondedDevices();
         // If there are paired devices
@@ -468,6 +524,7 @@ public class MapsActivity extends FragmentActivity implements
         }
         Log.d(TAG, ""+cfDevice.toString());
         btHandler = new Handler();
+        //Connect to the appropriate device
         new ConnectThread(cfDevice).run();
     }
     private class ConnectThread extends Thread {
@@ -499,11 +556,15 @@ public class MapsActivity extends FragmentActivity implements
                 try {
                     btSocket.close();
                 } catch (IOException closeException) { }
+                //If connection fails, return to main menu
+                //onBackPressed();
+                finish();
+                Toast.makeText(getApplicationContext(), "Connection to Sensor network failed. Unable to Track Routes.", Toast.LENGTH_SHORT).show();
                 return;
             }
 
             // Do work to manage the connection (in a separate thread)
-            manageConnectedSocket();
+            //manageConnectedSocket();
         }
 
         /** Will cancel an in-progress connection, and close the socket */
@@ -514,10 +575,7 @@ public class MapsActivity extends FragmentActivity implements
         }
     }
 
-    private void manageConnectedSocket(){
-        //new Thread(new btThread()).start();
-    }
-
+    //Maintains the connection to the MCU for data receive
     final class btThread implements Runnable {
         private final InputStream mmInStream;
         public btThread() {
@@ -536,6 +594,7 @@ public class MapsActivity extends FragmentActivity implements
                 Log.d("workerThread", "BT is not enabled for a settings worker thread!");
                 return;
             }
+            //Wait for response from BT
             while(!Thread.currentThread().isInterrupted() && mBluetoothAdapter.isEnabled()) {
                 int bytesAvailable;
                 boolean workDone = false;
@@ -544,25 +603,24 @@ public class MapsActivity extends FragmentActivity implements
                    // Log.d("refreshThread", "attempting btConnection for receiving");
                     bytesAvailable = mmInStream.available();
                     if(bytesAvailable > 0) {
-
+                        //Parse the incoming message
                         byte[] packetBytes = new byte[bytesAvailable];
-                        Log.d("bt receive","bytes available:" + bytesAvailable);
+                        Log.d("bt receive", "bytes available:" + bytesAvailable);
                         byte[] readBuffer = new byte[1024];
                         mmInStream.read(packetBytes);
-
                         for(int i=0;i<bytesAvailable;i++) {
                             byte b = packetBytes[i];
+                            //End of message, post to handler
                             if(b == delimiter) {
                                 byte[] encodedBytes = new byte[readBufferPosition];
                                 System.arraycopy(readBuffer, 0, encodedBytes, 0, encodedBytes.length);
                                 final String data = new String(encodedBytes, "US-ASCII");
                                 readBufferPosition = 0;
                                 Log.d(TAG, "String that was received in thread: " + data);
-
                                 //The variable data now contains a full sensor reading
                                 btHandler.post(new Runnable() {
                                     public void run() {
-                                        //setTexts based upon data
+                                        //send complete string to update the sensor values
                                         parseSensorData(data);
                                     }
                                 });
@@ -570,6 +628,7 @@ public class MapsActivity extends FragmentActivity implements
                                 break;
                             }
                             else {
+                                //Get next byte
                                 readBuffer[readBufferPosition++] = b;
                             }
                         }
@@ -589,51 +648,68 @@ public class MapsActivity extends FragmentActivity implements
             Log.d("workerThread", "Exiting worker thread");
         }
     }
-
+    //parse the sensor data contained in a string
+    //Data is in format: "HR,RPM,INCLINE\n"
     public void parseSensorData(String reading){
         Log.d(TAG, reading);
         try{
+            int tempHR = 0;
             String[] parts = reading.split(",");
-            prevHR = Integer.parseInt(parts[0]);
+            tempHR = Integer.parseInt(parts[0]);
+            //Ignore the first 5 readings, as these are inaccurate before sensor calibration
+            if(HRInitCounter < 5){
+                HRInitCounter++;
+                prevHR = 80;
+            }else if(Math.abs(prevHR-tempHR) > 30){
+                //Do nothing, bad hr value due to poor contact with skin
+            }else{
+                prevHR = tempHR;
+            }
             prevRPM = Integer.parseInt(parts[1]);
             prevInc = Double.parseDouble(parts[2]);
-            Log.d(TAG, "New Sensor Reading: " + prevHR + ", " + prevRPM + ", " + prevInc);
+           // Log.d(TAG, "New Sensor Reading: " + prevHR + ", " + prevRPM + ", " + prevInc);
         }catch(Exception e){
             Log.d(TAG, "ERROROROROR");
         }
+        //Process the new location
         handleNewLocation(returnLoc);
     }
 
+    //Handle return from bluetooth turn on request
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if(requestCode == REQUEST_ENABLE_BT){
             if(resultCode == RESULT_OK){
-                connectCFDevice();
+                    connectCFDevice();
             }
             else{
                 Toast.makeText(this, "oops. Something went wrong. Try Again.", Toast.LENGTH_SHORT).show();
             }
         }
     }
-    @Override
-    public void onBackPressed(){
-        if(btSocket.isConnected()){
-            try {
-                btSocket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        super.onBackPressed();
-    }
-    @Override
-    protected void onStop(){
-        if(btSocket.isConnected()){
-            try {
-                btSocket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        super.onStop();
-    }
+
+//    @Override
+//    public void onBackPressed(){
+//        //Close the socket if leaving activity
+//        if(btSocket.isConnected()){
+//            try {
+//                btSocket.close();
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+//        }
+//        super.onBackPressed();
+//    }
+
+//    @Override
+//    protected void onStop(){
+//        //Close the socket if leaving activity
+//        if(btSocket.isConnected()){
+//            try {
+//                btSocket.close();
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+//        }
+//        super.onStop();
+//    }
 }

@@ -1,47 +1,47 @@
 package com.example.bgodd_000.locationtrack;
 
-        import android.content.Context;
-        import android.content.IntentSender;
-        import android.content.SharedPreferences;
-        import android.graphics.Color;
-        import android.location.Location;
-        import android.os.SystemClock;
-        import android.support.v4.app.FragmentActivity;
-        import android.os.Bundle;
-        import android.util.Log;
-        import android.view.View;
-        import android.widget.Button;
-        import android.widget.TextView;
+import android.content.Context;
+import android.content.IntentSender;
+import android.content.SharedPreferences;
+import android.graphics.Color;
+import android.location.Location;
+import android.os.SystemClock;
+import android.support.v4.app.FragmentActivity;
+import android.os.Bundle;
+import android.util.Log;
+import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
 
-        import com.google.android.gms.common.ConnectionResult;
-        import com.google.android.gms.common.api.GoogleApiClient;
-        import com.google.android.gms.location.LocationListener;
-        import com.google.android.gms.location.LocationRequest;
-        import com.google.android.gms.location.LocationServices;
-        import com.google.android.gms.maps.CameraUpdateFactory;
-        import com.google.android.gms.maps.GoogleMap;
-        import com.google.android.gms.maps.OnMapReadyCallback;
-        import com.google.android.gms.maps.SupportMapFragment;
-        import com.google.android.gms.maps.model.BitmapDescriptorFactory;
-        import com.google.android.gms.maps.model.LatLng;
-        import com.google.android.gms.maps.model.MarkerOptions;
-        import com.google.android.gms.maps.model.Polygon;
-        import com.google.android.gms.maps.model.PolygonOptions;
-        import com.google.android.gms.maps.model.Polyline;
-        import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Polygon;
+import com.google.android.gms.maps.model.PolygonOptions;
+import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
 
-        import java.io.BufferedReader;
-        import java.io.File;
-        import java.io.FileNotFoundException;
-        import java.io.IOException;
-        import java.io.InputStream;
-        import java.io.InputStreamReader;
-        import java.util.ArrayList;
-        import java.util.Date;
-        import java.util.LinkedList;
-        import java.util.List;
-        import java.util.Map;
-        import java.util.TreeMap;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 public class PrevRouteActivity extends FragmentActivity implements
         GoogleApiClient.ConnectionCallbacks,
@@ -74,20 +74,24 @@ public class PrevRouteActivity extends FragmentActivity implements
         Bundle extras = getIntent().getExtras();
         boolean track = extras.getBoolean("fromTrack");
         if(!track){
+            //This activity was called from main menu, must load route from memory
             String sum_name = extras.getString("routeName");
             SharedPreferences prefs = getSharedPreferences("MyPrefs", Context.MODE_PRIVATE);
             String rtPath = prefs.getString(sum_name,"");
             loadRouteFromFile(rtPath);
         }else{
+            //activity called from route tracking, must load result from global value
             //rt = extras.getParcelable("routeData");
             rt = Globals.summary;
         }
 
+        //Add the route to map, update summary text box
         TextView sumText = (TextView) findViewById(R.id.route_sum_text);
         sumText.setText(String.format("Route Summary:\nTotal Distance Traveled: %.2f m\nTotal time: %.2f sec\n Average Speed: %.2f m/s\nAverage Incline: %.2f deg\nAverage Pedal RPM: %.2f rpm\nAverage Heart Rate: %.2f bpm\nCalories Burned: %.1f cal", rt.totalDistance, rt.elapsedTime, rt.avgSpeed, rt.avgIncline, rt.avgRPM, rt.avgHR, rt.calorieBurn));
         for(routeNode n: rt.points){
             routepoints.add(n.loc);
         }
+        //Set event listeners
         Button nextButton = (Button) findViewById(R.id.next_sum_button);
         nextButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -100,6 +104,7 @@ public class PrevRouteActivity extends FragmentActivity implements
                 prevClick(v);
             }
         });
+        //current page index = 0
         index = 0;
         //Log.d(TAG,"Post on Create: "+SystemClock.elapsedRealtimeNanos());
     }
@@ -128,6 +133,7 @@ public class PrevRouteActivity extends FragmentActivity implements
     }
     @Override
     public void onConnected(Bundle bundle) {
+        //Add polyline of route to map, add markers for start and end
         if(!routepoints.isEmpty()){
             Polyline route = mMap.addPolyline(new PolylineOptions());
             route.setPoints(routepoints);
@@ -145,11 +151,12 @@ public class PrevRouteActivity extends FragmentActivity implements
             mMap.moveCamera(CameraUpdateFactory.zoomTo(13));
         }
         Log.d(TAG, "End of Load: " + SystemClock.elapsedRealtimeNanos());
-        new Thread(new Runnable() {
-            public void run() {
-                Log.d(TAG, rt.toString());
-            }
-        }).start();
+        //Debug - print the route summary for comparison
+//        new Thread(new Runnable() {
+//            public void run() {
+//                Log.d(TAG, rt.toString());
+//            }
+//        }).start();
 
 
     }
@@ -170,12 +177,13 @@ public class PrevRouteActivity extends FragmentActivity implements
             Log.i(TAG, "Location services failed with code: " + connectionResult.getErrorCode());
         }
     }
+    //Get the route summary from memory
     private void loadRouteFromFile(String path){
         String ret = "";
 
         try {
             InputStream inputStream = openFileInput(path);
-
+            //parse the bytes into a string
             if ( inputStream != null ) {
                 InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
                 BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
@@ -195,9 +203,10 @@ public class PrevRouteActivity extends FragmentActivity implements
         } catch (IOException e) {
             Log.e("login activity", "Can not read file: " + e.toString());
         }
-
+        //use the string to make a route summary
         rt = new routeSummary(ret);
     }
+    //Update the screen as the user navigates through the route summary
     private void nextClick(View v){
         if(index == MAXINDEX){
             index = 0;
@@ -215,6 +224,12 @@ public class PrevRouteActivity extends FragmentActivity implements
         initializeScreen();
     }
 
+    //Update the map based on which data point summary we are viewing
+    //Overall summary = 0;
+    //Speed = 1;
+    //HR = 2;
+    //RPM = 3;
+    //Incline = 4;
     private void initializeScreen(){
         mMap.clear();
         if(!routepoints.isEmpty()){
@@ -262,9 +277,12 @@ public class PrevRouteActivity extends FragmentActivity implements
                 break;
         }
     }
+    //Set up the speed summary
     private void initializeSpeedMap(){
         double minSpeed = 99999;
         double maxSpeed = 0;
+        //Add the color coded polylines representing the range of speeds. Keep adding points to line
+        //until in new range, then make a new line and add previous line to map
         ArrayList<ArrayList<LatLng>> pointList = new ArrayList<>();
         ArrayList<LatLng> temp = new ArrayList<>();
         ArrayList<Integer> ranges = new ArrayList<>();
@@ -315,9 +333,12 @@ public class PrevRouteActivity extends FragmentActivity implements
         }
     }
 
+    //Put the HR polylines on the map
     private void initializeHRMAP(){
         int minHR = 99999;
         int maxHR = 0;
+        //Add the color coded polylines representing the range of speeds. Keep adding points to line
+        //until in new range, then make a new line and add previous line to map
         ArrayList<ArrayList<LatLng>> pointList = new ArrayList<>();
         ArrayList<LatLng> temp = new ArrayList<>();
         ArrayList<Integer> ranges = new ArrayList<>();
@@ -350,25 +371,29 @@ public class PrevRouteActivity extends FragmentActivity implements
         TextView sumText = (TextView) findViewById(R.id.route_sum_text);
         sumText.setText(String.format("Heart Rate Summary:\nAverage Heart Rate: %.2f bpm\nMinimum Heart Rate: %d bpm\n Maximum Heart Rate: %d bpm", rt.avgHR, minHR, maxHR));
     }
+    //Determines the range of hr
     private int calcHRRange(int hr){
         if(hr < 60){
             return 0;
         }else if(hr >= 60 && hr < 90){
             return 1;
-        }else if(hr >= 90 && hr < 110){
+        }else if(hr >= 90 && hr < 120){
             return 2;
-        }else if(hr >= 110 && hr < 140){
+        }else if(hr >= 120 && hr < 150){
             return 3;
-        }else if(hr >= 140 && hr < 170) {
+        }else if(hr >= 150 && hr < 180) {
             return 4;
         }else{
             return 5;
         }
     }
 
+    //Put up the RPM summary map
     private void initializeRPMMap(){
         double minRPM = 99999;
         double maxRPM = 0;
+        //Add the color coded polylines representing the range of speeds. Keep adding points to line
+        //until in new range, then make a new line and add previous line to map
         ArrayList<ArrayList<LatLng>> pointList = new ArrayList<>();
         ArrayList<LatLng> temp = new ArrayList<>();
         ArrayList<Integer> ranges = new ArrayList<>();
@@ -401,25 +426,29 @@ public class PrevRouteActivity extends FragmentActivity implements
         TextView sumText = (TextView) findViewById(R.id.route_sum_text);
         sumText.setText(String.format("Pedal RPM Summary:\nAverage RPM: %.2f rpm\nMinimum RPM: %.2f rpm\n Maximum RPM: %.2f rpm", rt.avgRPM, minRPM, maxRPM));
     }
+    //Calc the RPM ranges
     private int calcRPMRange(double rpm){
-        if(rpm < 30){
+        if(rpm < 20){
             return 0;
-        }else if(rpm >= 30 && rpm < 45){
+        }else if(rpm >= 20 && rpm < 40){
             return 1;
-        }else if(rpm >= 45 && rpm < 60){
+        }else if(rpm >= 40 && rpm < 60){
             return 2;
-        }else if(rpm >= 60 && rpm < 75){
+        }else if(rpm >= 60 && rpm < 80){
             return 3;
-        }else if(rpm >= 75 && rpm < 90) {
+        }else if(rpm >= 80 && rpm < 100) {
             return 4;
         }else{
             return 5;
         }
     }
 
+    //Initialize Incline summary map
     private void initializeInclineMap(){
         double minIncline = 999;
         double maxIncline = -999;
+        //Add the color coded polylines representing the range of speeds. Keep adding points to line
+        //until in new range, then make a new line and add previous line to map
         ArrayList<ArrayList<LatLng>> pointList = new ArrayList<>();
         ArrayList<LatLng> temp = new ArrayList<>();
         ArrayList<Integer> ranges = new ArrayList<>();
@@ -454,22 +483,24 @@ public class PrevRouteActivity extends FragmentActivity implements
 
     }
 
+    //calc the incline point ranges for the polylines
     private int calcInclineRange(double incline){
-        if(incline < -45){
+        if(incline < -30){
             return 0;
-        }else if(incline >= -45 && incline < -15){
+        }else if(incline >= -30 && incline < -15){
             return 1;
-        }else if(incline >= -15 && incline < 15){
+        }else if(incline >= -15 && incline < 0){
             return 2;
-        }else if(incline >= 15 && incline < 45){
+        }else if(incline >= 0 && incline < 15){
             return 3;
-        }else if(incline >= 45 && incline < 75) {
+        }else if(incline >= 15 && incline < 30) {
             return 4;
         }else{
             return 5;
         }
     }
 
+    //Assign a color to the range for each of the summary polylines
     private int calcRangeColor(int range){
         switch (range){
             case 0:

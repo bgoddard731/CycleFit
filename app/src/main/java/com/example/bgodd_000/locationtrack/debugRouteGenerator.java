@@ -7,6 +7,9 @@ import java.util.Date;
 /**
  * Created by bgodd_000 on 2/17/2016.
  */
+
+//Class that can auto generate a route summary of dummy values for use in testing.
+//Change various parameters in order to change the values that are added to the dummy route if desired
 public class debugRouteGenerator {
     public routeSummary genRT;
     public debugRouteSum debRT;

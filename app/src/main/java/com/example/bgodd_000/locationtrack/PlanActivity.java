@@ -636,7 +636,11 @@ public class PlanActivity extends FragmentActivity implements
             }
             avgCalBurn /= sim_routes.size();
             avgTime /= sim_routes.size();
-            ret += String.format("Average Time Elapsed: %1$.2f sec\nAverage Calorie Burn: %2$.2f cal", avgTime, avgCalBurn);
+            int hours = (int) avgTime / 3600;
+            double hr_rem = avgTime % 3600;
+            int min = (int) hr_rem / 60;
+            double sec = hr_rem % 60;
+            ret += String.format("Average Time Elapsed: %d hr %d min %.2f sec\nAverage Calorie Burn: %2$.2f cal", hours, min, sec, avgCalBurn);
         }
         return ret;
     }

@@ -11,6 +11,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -87,7 +88,11 @@ public class PrevRouteActivity extends FragmentActivity implements
 
         //Add the route to map, update summary text box
         TextView sumText = (TextView) findViewById(R.id.route_sum_text);
-        sumText.setText(String.format("Route Summary:\nTotal Distance Traveled: %.2f m\nTotal time: %.2f sec\n Average Speed: %.2f m/s\nAverage Incline: %.2f deg\nAverage Pedal RPM: %.2f rpm\nAverage Heart Rate: %.2f bpm\nCalories Burned: %.1f cal", rt.totalDistance, rt.elapsedTime, rt.avgSpeed, rt.avgIncline, rt.avgRPM, rt.avgHR, rt.calorieBurn));
+        int hours = (int) rt.elapsedTime / 3600;
+        double hr_rem = rt.elapsedTime % 3600;
+        int min = (int) hr_rem / 60;
+        double sec = hr_rem % 60;
+        sumText.setText(String.format("Route Summary:\nTotal Distance Traveled: %.2f m\nTime: %d hr %d min %.2f sec\n Average Speed: %.2f m/s\nAverage Incline: %.2f deg\nAverage Pedal RPM: %.2f rpm\nAverage Heart Rate: %.2f bpm\nCalories Burned: %.1f cal", rt.totalDistance, hours, min, sec, rt.avgSpeed, rt.avgIncline, rt.avgRPM, rt.avgHR, rt.calorieBurn));
         for(routeNode n: rt.points){
             routepoints.add(n.loc);
         }
@@ -247,33 +252,48 @@ public class PrevRouteActivity extends FragmentActivity implements
 //            mMap.moveCamera(CameraUpdateFactory.zoomTo(13));
         }
         TextView sumText = (TextView) findViewById(R.id.route_sum_text);
+        ImageView scale = (ImageView) findViewById(R.id.scale);
         switch (index){
             case 0:
                 if(!routepoints.isEmpty()){
                     Polyline route = mMap.addPolyline(new PolylineOptions());
                     route.setPoints(routepoints);
                 }
-                sumText.setText(String.format("Route Summary:\nTotal Distance Traveled: %.2f m\nTotal time: %.2f sec\n Average Speed: %.2f m/s\nAverage Incline: %.2f deg\nAverage Pedal RPM: %.2f rpm\nAverage Heart Rate: %.2f bpm\nCalories Burned: %.1f cal", rt.totalDistance, rt.elapsedTime, rt.avgSpeed, rt.avgIncline, rt.avgRPM, rt.avgHR, rt.calorieBurn));
+                scale.setImageResource(R.drawable.bpm_color_scale);
+                scale.setVisibility(View.INVISIBLE);
+                int hours = (int) rt.elapsedTime / 3600;
+                double hr_rem = rt.elapsedTime % 3600;
+                int min = (int) hr_rem / 60;
+                double sec = hr_rem % 60;
+                sumText.setText(String.format("Route Summary:\nTotal Distance Traveled: %.2f m\nTime: %d hr %d min %.2f sec\n Average Speed: %.2f m/s\nAverage Incline: %.2f deg\nAverage Pedal RPM: %.2f rpm\nAverage Heart Rate: %.2f bpm\nCalories Burned: %.1f cal", rt.totalDistance, hours, min, sec, rt.avgSpeed, rt.avgIncline, rt.avgRPM, rt.avgHR, rt.calorieBurn));
                 break;
             case 1:
                 if(!routepoints.isEmpty()){
                     initializeSpeedMap();
                 }
+                scale.setImageResource(R.drawable.speed_color_scale);
+                scale.setVisibility(View.VISIBLE);
                 break;
             case 2:
                 if(!routepoints.isEmpty()){
                     initializeHRMAP();
                 }
+                scale.setImageResource(R.drawable.bpm_color_scale);
+                scale.setVisibility(View.VISIBLE);
                 break;
             case 3:
                 if(!routepoints.isEmpty()){
                     initializeRPMMap();
                 }
+                scale.setImageResource(R.drawable.rpm_color_scale);
+                scale.setVisibility(View.VISIBLE);
                 break;
             case 4:
                 if(!routepoints.isEmpty()){
                     initializeInclineMap();
                 }
+                scale.setImageResource(R.drawable.incline_color_scale);
+                scale.setVisibility(View.VISIBLE);
                 break;
         }
     }
@@ -506,15 +526,15 @@ public class PrevRouteActivity extends FragmentActivity implements
             case 0:
                 return Color.BLACK;
             case 1:
-                return Color.MAGENTA;
+                return Color.rgb(79,18,104);
             case 2:
-                return Color.BLUE;
+                return Color.rgb(0,43,100);
             case 3:
-                return Color.GREEN;
+                return Color.rgb(32,79,35);
             case 4:
-                return Color.YELLOW;
+                return Color.rgb(255,203,5);
             case 5:
-                return Color.RED;
+                return Color.rgb(167,14,19);
             default: return Color.BLACK;
         }
     }

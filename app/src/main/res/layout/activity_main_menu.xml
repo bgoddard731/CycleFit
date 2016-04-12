@@ -21,13 +21,13 @@
     </FrameLayout>
 
     <ImageView
-        android:layout_width="557dp"
+        android:layout_width="1065dp"
         android:layout_height="0dp"
         android:id="@+id/imageView"
         android:layout_gravity="center_horizontal"
-        android:src="@drawable/bikepic"
+        android:src="@drawable/logo"
         android:maxHeight="20dp"
-        android:layout_weight="0.41" />
+        android:layout_weight="0.78" />
 
     <TextView
         android:layout_width="match_parent"

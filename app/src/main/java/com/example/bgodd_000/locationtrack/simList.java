@@ -43,7 +43,11 @@ public class simList extends AppCompatActivity {
             entry.setLayoutParams(lp);
             Date temp = s.end;
             String entry_text = temp.toString();
-            entry_text += String.format("\nDistance: %.2fm\nTime: %.2fs\nCalories Burned: %.2f cal",s.totalDistance, s.elapsedTime, s.calorieBurn);
+            int hours = (int) s.elapsedTime / 3600;
+            double hr_rem = s.elapsedTime % 3600;
+            int min = (int) hr_rem / 60;
+            double sec = hr_rem % 60;
+            entry_text += String.format("\nDistance: %.2fm\nTime: %d hr %d min %.2fs\nCalories Burned: %.2f cal",s.totalDistance, hours, min, sec, s.calorieBurn);
             entry.setText(entry_text);
             entry.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
             entry.setTag(s.end.getTime());

@@ -300,7 +300,7 @@ public class MapsActivity extends FragmentActivity implements
     }
 
     //Start location tracking
-    //This button also doulbes as the discard button at the end of a route
+    //This button also doubles as the discard button at the end of a route
     private void startButtonClick(){
         //If start button is being used as the discard option
         if(saveOptions) {
@@ -367,7 +367,11 @@ public class MapsActivity extends FragmentActivity implements
             }
             rt.avgSpeed = avg_speed;
             TextView resultText = (TextView) findViewById(R.id.result_text);
-            resultText.setText(String.format("Route Ended:\nTotal Distance Traveled: %1$.2fm\nTotal time: %2$.2fsec\n Average Speed: %3$.2fm/s", distance_traveled, route_time, avg_speed));
+            int hours = (int) route_time / 3600;
+            double hr_rem = route_time % 3600;
+            int min = (int) hr_rem / 60;
+            double sec = hr_rem % 60;
+            resultText.setText(String.format("Route Ended:\nTotal Distance Traveled: %.2fm\nTotal time: %d hr %d min %.2fsec\n Average Speed: %.2fm/s", distance_traveled, hours, min, sec, avg_speed));
             //Log.d(TAG, rt.toString());
 
             //reset the global data

@@ -211,6 +211,9 @@ public class MapsActivity extends FragmentActivity implements
     }
     //Function to process a new location point
     private void handleNewLocation(Location loc){
+        if(!running){
+            return;
+        }
         //If this is first point of a route, prev_loc will be null.
         //Update to current point
         if(prev_loc == null) {
@@ -292,7 +295,9 @@ public class MapsActivity extends FragmentActivity implements
     public void onLocationChanged(Location location) {
         returnLoc = location;
         //Get sensor reading
-        new Thread(new btThread()).start();
+        if(running){
+            new Thread(new btThread()).start();
+        }
         //handleNewLocation is now called after sensor data is received
         //To test without the sensor network connection, you must comment out all the bluetooth stuff
         //and then uncomment the line below, so that the functionality bypasses the bluetooth data connection and requests
@@ -642,10 +647,12 @@ public class MapsActivity extends FragmentActivity implements
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
+                    return;
                     //Toast.makeText(getApplicationContext(), "Refresh error: !", Toast.LENGTH_SHORT).show();
                 }
                 catch (NullPointerException e) {
                     e.printStackTrace();
+                    return;
 //                        Toast.makeText(getApplicationContext(), "Beacon error: Not connected!", Toast.LENGTH_SHORT).show();
                 }
             }
@@ -670,7 +677,12 @@ public class MapsActivity extends FragmentActivity implements
                 prevHR = tempHR;
             }
             prevRPM = Integer.parseInt(parts[1]);
-            prevInc = Double.parseDouble(parts[2]);
+            double inc = Double.parseDouble(parts[2]);
+            if(inc < -90 || inc > 90){
+                //do nothing
+            }else{
+                prevInc = inc;
+            }
            // Log.d(TAG, "New Sensor Reading: " + prevHR + ", " + prevRPM + ", " + prevInc);
         }catch(Exception e){
             Log.d(TAG, "ERROROROROR");
@@ -691,18 +703,18 @@ public class MapsActivity extends FragmentActivity implements
         }
     }
 
-//    @Override
-//    public void onBackPressed(){
-//        //Close the socket if leaving activity
-//        if(btSocket.isConnected()){
-//            try {
-//                btSocket.close();
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
-//        }
-//        super.onBackPressed();
-//    }
+    @Override
+    public void onBackPressed(){
+        //Close the socket if leaving activity
+        if(btSocket.isConnected()){
+            try {
+                btSocket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        super.onBackPressed();
+    }
 
 //    @Override
 //    protected void onStop(){

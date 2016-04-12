@@ -82,10 +82,18 @@ public class routeSummary{
         print += avgSpeed+ ";";
         print += avgRPM+ ";";
         print += calorieBurn+ ";";
-        print += points.get(0).loc.latitude + ";";
-        print += points.get(0).loc.longitude + ";";
-        print += points.get(points.size()-1).loc.latitude + ";";
-        print += points.get(points.size()-1).loc.longitude;
+        if(points.size() > 0){
+            print += points.get(0).loc.latitude + ";";
+            print += points.get(0).loc.longitude + ";";
+            print += points.get(points.size()-1).loc.latitude + ";";
+            print += points.get(points.size()-1).loc.longitude;
+        }else{
+            print += 0 + ";";
+            print += 0 + ";";
+            print += 0 + ";";
+            print += 0;
+        }
+
         return print;
     }
 

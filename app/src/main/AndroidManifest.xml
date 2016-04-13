@@ -35,18 +35,31 @@
             android:label="@string/title_activity_maps"
             android:screenOrientation="portrait" >
         </activity>
-        <activity android:name=".MainMenuActivity" >
+        <activity
+            android:name=".MapsNBTActivity"
+            android:label="@string/title_activity_maps"
+            android:screenOrientation="portrait" >
+        </activity>
+        <activity
+            android:name=".MainMenuActivity"
+            android:screenOrientation="portrait" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".PrevRouteActivity" >
+        <activity
+            android:name=".PrevRouteActivity"
+            android:screenOrientation="portrait" >
         </activity>
-        <activity android:name=".PlanActivity" >
+        <activity
+            android:name=".PlanActivity"
+            android:screenOrientation="portrait" >
         </activity>
-        <activity android:name=".simList" >
+        <activity
+            android:name=".simList"
+            android:screenOrientation="portrait" >
         </activity>
     </application>
 

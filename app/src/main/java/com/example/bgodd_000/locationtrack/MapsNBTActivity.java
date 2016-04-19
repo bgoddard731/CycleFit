@@ -43,6 +43,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedList;
@@ -424,12 +425,19 @@ public class MapsNBTActivity extends FragmentActivity implements
         //Calorie burn calculations:
         if(curr_user.male){
             double mins = rt.elapsedTime/60;
-            int years = rt.end.getYear()-curr_user.year;
+            SimpleDateFormat sdf  = new SimpleDateFormat("yyyy");
+            int current_year = Integer.parseInt(sdf.format(rt.end));
+            int years = current_year-curr_user.year;
             rt.calorieBurn = (years*.2017 - curr_user.weight*.09036 + (avgHR*.6309 - 55.0969)*mins)/4.184;
         }else{
             double mins = rt.elapsedTime/60;
-            int years = rt.end.getYear()-curr_user.year;
-            rt.calorieBurn = (years*.074 - curr_user.weight*.05741 + (avgHR*.4472 - 22.4022)*mins)/4.184;
+            SimpleDateFormat sdf  = new SimpleDateFormat("yyyy");
+            int current_year = Integer.parseInt(sdf.format(rt.end));
+            int years = current_year-curr_user.year;
+            rt.calorieBurn = (years*.2017 - curr_user.weight*.09036 + (avgHR*.6309 - 55.0969)*mins)/4.184;
+        }
+        if(rt.calorieBurn < 0){
+            rt.calorieBurn = 0;
         }
 
 

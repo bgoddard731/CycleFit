@@ -422,7 +422,7 @@ public class PrevRouteActivity extends FragmentActivity implements
             if(n.rpm < minRPM){
                 minRPM = n.rpm;
             }
-            if(n.hr > maxRPM){
+            if(n.rpm > maxRPM){
                 maxRPM = n.rpm;
             }
             if(calcRPMRange(n.rpm) == curr_range){
@@ -526,15 +526,15 @@ public class PrevRouteActivity extends FragmentActivity implements
             case 0:
                 return Color.BLACK;
             case 1:
-                return Color.rgb(79,18,104);
+                return Color.rgb(0,0,255);
             case 2:
-                return Color.rgb(0,43,100);
+                return Color.rgb(0,255,0);
             case 3:
-                return Color.rgb(32,79,35);
+                return Color.rgb(255,255,0);
             case 4:
-                return Color.rgb(255,203,5);
+                return Color.rgb(241,90,36);
             case 5:
-                return Color.rgb(167,14,19);
+                return Color.rgb(255,0,0);
             default: return Color.BLACK;
         }
     }

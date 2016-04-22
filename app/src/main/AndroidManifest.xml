@@ -41,6 +41,11 @@
             android:screenOrientation="portrait" >
         </activity>
         <activity
+            android:name=".MapsNBT2Activity"
+            android:label="@string/title_activity_maps"
+            android:screenOrientation="portrait" >
+        </activity>
+        <activity
             android:name=".MapsActivity2"
             android:label="@string/title_activity_maps"
             android:screenOrientation="portrait" >
@@ -59,7 +64,15 @@
             android:screenOrientation="portrait" >
         </activity>
         <activity
+            android:name=".PrevRouteActivity2"
+            android:screenOrientation="portrait" >
+        </activity>
+        <activity
             android:name=".PlanActivity"
+            android:screenOrientation="portrait" >
+        </activity>
+        <activity
+            android:name=".PlanActivity2"
             android:screenOrientation="portrait" >
         </activity>
         <activity

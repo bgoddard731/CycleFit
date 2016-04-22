@@ -38,7 +38,10 @@ import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonParseException;
 import com.google.gson.JsonPrimitive;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
@@ -50,6 +53,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.lang.reflect.Type;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -63,7 +67,7 @@ import java.util.TreeMap;
 import java.util.UUID;
 
 
-public class MapsActivity2 extends FragmentActivity implements
+public class MapsNBT2Activity extends FragmentActivity implements
         GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener,
         LocationListener{
@@ -95,23 +99,19 @@ public class MapsActivity2 extends FragmentActivity implements
     //Route summary object that will allow a route to be stored
     private routeSummary rt = new routeSummary();
 
-    //Bluetooth connection variables
-    private BluetoothAdapter mBluetoothAdapter;
-    private Set<BluetoothDevice> pairedDevices;
-    private BluetoothDevice cfDevice;
-    private BluetoothSocket btSocket;
-    private int REQUEST_ENABLE_BT = 1;
-    final byte delimiter = 59; //ASCII value for semicolon char, used to end BT transmission packet
-    int readBufferPosition = 0;
-    private Handler btHandler;
+    //    //Bluetooth connection variables
+//    private BluetoothAdapter mBluetoothAdapter;
+//    private Set<BluetoothDevice> pairedDevices;
+//    private BluetoothDevice cfDevice;
+//    private BluetoothSocket btSocket;
+//    private int REQUEST_ENABLE_BT = 1;
+//    final byte delimiter = 10; //ASCII value for newline char, used to end BT transmission packet
+//    int readBufferPosition = 0;
+//    private Handler btHandler;
     private int prevHR = 80;
-    private double[] HRs = new double[4];
-    private int HRcounter = 0;
     private int prevRPM = 0;
     private double prevInc = 0;
     private int HRInitCounter = 0;
-    private int inc_counter = 0;
-    private double[] Incs = new double[4];
 
     //Connects device to Google Play services used to display location and map
     private GoogleApiClient mGoogleApiClient;
@@ -158,19 +158,19 @@ public class MapsActivity2 extends FragmentActivity implements
         });
 
         //Connect to bluetooth device for sensor monitoring
-        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        if (mBluetoothAdapter == null) {
-            // Device does not support Bluetooth
-            Toast.makeText(getApplicationContext(), "This device does not support bluetooth. You will not be able to user Cycle Fit", Toast.LENGTH_SHORT).show();
-            onBackPressed();
-        }
-        if(!mBluetoothAdapter.isEnabled()){
-            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            startActivityForResult(enableBtIntent,REQUEST_ENABLE_BT);
-        }else{
-            //Make device connection
-            connectCFDevice();
-        }
+//        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+//        if (mBluetoothAdapter == null) {
+//            // Device does not support Bluetooth
+//            Toast.makeText(getApplicationContext(), "This device does not support bluetooth. You will not be able to user Cycle Fit", Toast.LENGTH_SHORT).show();
+//            onBackPressed();
+//        }
+//        if(!mBluetoothAdapter.isEnabled()){
+//            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+//            startActivityForResult(enableBtIntent,REQUEST_ENABLE_BT);
+//        }else{
+//            //Make device connection
+//            connectCFDevice();
+//        }
 
     }
 
@@ -183,12 +183,12 @@ public class MapsActivity2 extends FragmentActivity implements
         if(!mGoogleApiClient.isConnected()){
             mGoogleApiClient.connect();
         }
-        //Reconnect btSocket if not connected
-        if(btSocket != null){
-            if(!btSocket.isConnected()){
-                connectCFDevice();
-            }
-        }
+//        //Reconnect btSocket if not connected
+//        if(btSocket != null){
+//            if(!btSocket.isConnected()){
+//                connectCFDevice();
+//            }
+//        }
     }
 
     //Connect map if necessary
@@ -308,7 +308,9 @@ public class MapsActivity2 extends FragmentActivity implements
         returnLoc = location;
         //Get sensor reading
         if(running){
-            new Thread(new btThread()).start();
+            //new Thread(new btThread()).start();
+            //Dummy sensor reading
+            parseSensorData("90,0,10");
         }
         //handleNewLocation is now called after sensor data is received
         //To test without the sensor network connection, you must comment out all the bluetooth stuff
@@ -445,10 +447,10 @@ public class MapsActivity2 extends FragmentActivity implements
             int years = current_year-curr_user.year;
             rt.calorieBurn = (years*.2017 - curr_user.weight*.09036 + (avgHR*.6309 - 55.0969)*mins)/4.184;
         }
-
         if(rt.calorieBurn < 0){
             rt.calorieBurn = 0;
         }
+
 
         //save the route;
         Log.d(TAG, "Start of save: " + SystemClock.elapsedRealtimeNanos());
@@ -461,7 +463,7 @@ public class MapsActivity2 extends FragmentActivity implements
                 //Write the data to text files
                 saveRouteToFile();
                 //Store the file name in shared preferences
-                prefs.edit().putString("" + rt.end.getTime(), rt.end.getTime()+".txt").apply();
+                prefs.edit().putString("" + rt.end.getTime(), rt.end.getTime()+".rt").apply();
                 Map<String, ?> map = prefs.getAll();
                 //Delete a route if number exceeds maximum stored
                 if(map.size() > MAXROUTES + 1){
@@ -474,6 +476,7 @@ public class MapsActivity2 extends FragmentActivity implements
                     deleteRouteFile(path+"s");
                     prefs.edit().remove(name).apply();
                 }
+
             }
         }).start();
 
@@ -484,13 +487,13 @@ public class MapsActivity2 extends FragmentActivity implements
         prevIntent.putExtra("fromTrack", true);
         startActivity(prevIntent);
         //Close the btSocket
-        if(btSocket.isConnected()){
-            try {
-                btSocket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+//        if(btSocket.isConnected()){
+//            try {
+//                btSocket.close();
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+//        }
         //Reset map for return from summary
         mMap.clear();
         TextView resultText = (TextView) findViewById(R.id.result_text);
@@ -546,7 +549,6 @@ public class MapsActivity2 extends FragmentActivity implements
         catch (IOException e) {
             Log.e("Exception", "File write failed: " + e.toString());
         }
-
     }
 
     //delete file from memory
@@ -554,157 +556,154 @@ public class MapsActivity2 extends FragmentActivity implements
         File file = new File(path);
         boolean deleted = file.delete();
     }
-    //Open socket to the sensor MCU
-    private void connectCFDevice(){
-        pairedDevices = mBluetoothAdapter.getBondedDevices();
-        // If there are paired devices
-        if (pairedDevices.size() > 0) {
-            // Loop through paired devices
-            for (BluetoothDevice device : pairedDevices) {
-                if(device.getName().equals(Globals.user.deviceName)){
-                    cfDevice = device;
-                }
-            }
-        }
-        Log.d(TAG, ""+cfDevice.toString());
-        btHandler = new Handler();
-        //Connect to the appropriate device
-        new ConnectThread(cfDevice).run();
-    }
-    private class ConnectThread extends Thread {
-
-        public ConnectThread(BluetoothDevice device) {
-            // Use a temporary object that is later assigned to mmSocket,
-            // because mmSocket is final
-            BluetoothSocket tmp = null;
-
-            // Get a BluetoothSocket to connect with the given BluetoothDevice
-            try {
-                // MY_UUID is the app's UUID string, also used by the server code
-                UUID uuid = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb");
-                tmp = device.createRfcommSocketToServiceRecord(uuid);
-            } catch (IOException e) { }
-            btSocket = tmp;
-        }
-
-        public void run() {
-            // Cancel discovery because it will slow down the connection
-            mBluetoothAdapter.cancelDiscovery();
-
-            try {
-                // Connect the device through the socket. This will block
-                // until it succeeds or throws an exception
-                btSocket.connect();
-            } catch (IOException connectException) {
-                // Unable to connect; close the socket and get out
-                try {
-                    btSocket.close();
-                } catch (IOException closeException) { }
-                //If connection fails, return to main menu
-                //onBackPressed();
-                finish();
-                Toast.makeText(getApplicationContext(), "Connection to Sensor network failed. Unable to Track Routes.", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            // Do work to manage the connection (in a separate thread)
-            //manageConnectedSocket();
-        }
-
-        /** Will cancel an in-progress connection, and close the socket */
-        public void cancel() {
-            try {
-                btSocket.close();
-            } catch (IOException e) { }
-        }
-    }
-
-    //Maintains the connection to the MCU for data receive
-    final class btThread implements Runnable {
-        private final InputStream mmInStream;
-        public btThread() {
-            InputStream tmpIn = null;
-
-            // Get the input and output streams, using temp objects because
-            // member streams are final
-            try {
-                tmpIn = btSocket.getInputStream();
-            } catch (IOException e) { }
-
-            mmInStream = tmpIn;
-        }
-        public void run() {
-            if(!mBluetoothAdapter.isEnabled()){
-                Log.d("workerThread", "BT is not enabled for a settings worker thread!");
-                return;
-            }
-            //Wait for response from BT
-            while(!Thread.currentThread().isInterrupted() && mBluetoothAdapter.isEnabled()) {
-                int bytesAvailable;
-                boolean workDone = false;
-
-                try {
-                    // Log.d("refreshThread", "attempting btConnection for receiving");
-                    bytesAvailable = mmInStream.available();
-                    if(bytesAvailable > 12) {
-                        //Parse the incoming message
-                        byte[] packetBytes = new byte[4000];
-                        Log.d("bt receive", "bytes available:" + bytesAvailable);
-                        byte[] readBuffer = new byte[16000];
-                        mmInStream.read(packetBytes);
-                        for(int i=0;i<bytesAvailable;i++) {
-                            byte b = packetBytes[i];
-                            //End of message, post to handler
-                            if(b == delimiter && (readBufferPosition > (bytesAvailable-6))) {
-                                byte[] encodedBytes = new byte[readBufferPosition];
-                                System.arraycopy(readBuffer, 0, encodedBytes, 0, encodedBytes.length);
-                                final String data = new String(encodedBytes, "US-ASCII");
-                                readBufferPosition = 0;
-                                Log.d(TAG, "String that was received in thread: " + data);
-                                //The variable data now contains a full sensor reading
-                                btHandler.post(new Runnable() {
-                                    public void run() {
-                                        //send complete string to update the sensor values
-                                        parseSensorData(data);
-                                    }
-                                });
-                                workDone = true;
-                                break;
-                            }
-                            else {
-                                //Get next byte
-                                readBuffer[readBufferPosition++] = b;
-                            }
-                        }
-                        if (workDone == true){
-                            break;
-                        }
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    break;
-                    //Toast.makeText(getApplicationContext(), "Refresh error: !", Toast.LENGTH_SHORT).show();
-                }
-                catch (NullPointerException e) {
-                    e.printStackTrace();
-                    break;
-//                        Toast.makeText(getApplicationContext(), "Beacon error: Not connected!", Toast.LENGTH_SHORT).show();
-                }
-            }
-            Log.d("workerThread", "Exiting worker thread");
-        }
-    }
+    //    //Open socket to the sensor MCU
+//    private void connectCFDevice(){
+//        pairedDevices = mBluetoothAdapter.getBondedDevices();
+//        // If there are paired devices
+//        if (pairedDevices.size() > 0) {
+//            // Loop through paired devices
+//            for (BluetoothDevice device : pairedDevices) {
+//                if(device.getName().equals(Globals.user.deviceName)){
+//                    cfDevice = device;
+//                }
+//            }
+//        }
+//        Log.d(TAG, ""+cfDevice.toString());
+//        btHandler = new Handler();
+//        //Connect to the appropriate device
+//        new ConnectThread(cfDevice).run();
+//    }
+//    private class ConnectThread extends Thread {
+//
+//        public ConnectThread(BluetoothDevice device) {
+//            // Use a temporary object that is later assigned to mmSocket,
+//            // because mmSocket is final
+//            BluetoothSocket tmp = null;
+//
+//            // Get a BluetoothSocket to connect with the given BluetoothDevice
+//            try {
+//                // MY_UUID is the app's UUID string, also used by the server code
+//                UUID uuid = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb");
+//                tmp = device.createRfcommSocketToServiceRecord(uuid);
+//            } catch (IOException e) { }
+//            btSocket = tmp;
+//        }
+//
+//        public void run() {
+//            // Cancel discovery because it will slow down the connection
+//            mBluetoothAdapter.cancelDiscovery();
+//
+//            try {
+//                // Connect the device through the socket. This will block
+//                // until it succeeds or throws an exception
+//                btSocket.connect();
+//            } catch (IOException connectException) {
+//                // Unable to connect; close the socket and get out
+//                try {
+//                    btSocket.close();
+//                } catch (IOException closeException) { }
+//                //If connection fails, return to main menu
+//                //onBackPressed();
+//                finish();
+//                Toast.makeText(getApplicationContext(), "Connection to Sensor network failed. Unable to Track Routes.", Toast.LENGTH_SHORT).show();
+//                return;
+//            }
+//
+//            // Do work to manage the connection (in a separate thread)
+//            //manageConnectedSocket();
+//        }
+//
+//        /** Will cancel an in-progress connection, and close the socket */
+//        public void cancel() {
+//            try {
+//                btSocket.close();
+//            } catch (IOException e) { }
+//        }
+//    }
+//
+//    //Maintains the connection to the MCU for data receive
+//    final class btThread implements Runnable {
+//        private final InputStream mmInStream;
+//        public btThread() {
+//            InputStream tmpIn = null;
+//
+//            // Get the input and output streams, using temp objects because
+//            // member streams are final
+//            try {
+//                tmpIn = btSocket.getInputStream();
+//            } catch (IOException e) { }
+//
+//            mmInStream = tmpIn;
+//        }
+//        public void run() {
+//            if(!mBluetoothAdapter.isEnabled()){
+//                Log.d("workerThread", "BT is not enabled for a settings worker thread!");
+//                return;
+//            }
+//            //Wait for response from BT
+//            while(!Thread.currentThread().isInterrupted() && mBluetoothAdapter.isEnabled()) {
+//                int bytesAvailable;
+//                boolean workDone = false;
+//
+//                try {
+//                    // Log.d("refreshThread", "attempting btConnection for receiving");
+//                    bytesAvailable = mmInStream.available();
+//                    if(bytesAvailable > 0) {
+//                        //Parse the incoming message
+//                        byte[] packetBytes = new byte[bytesAvailable];
+//                        Log.d("bt receive", "bytes available:" + bytesAvailable);
+//                        byte[] readBuffer = new byte[1024];
+//                        mmInStream.read(packetBytes);
+//                        for(int i=0;i<bytesAvailable;i++) {
+//                            byte b = packetBytes[i];
+//                            //End of message, post to handler
+//                            if(b == delimiter && (readBufferPosition > (bytesAvailable-6))) {
+//                                byte[] encodedBytes = new byte[readBufferPosition];
+//                                System.arraycopy(readBuffer, 0, encodedBytes, 0, encodedBytes.length);
+//                                final String data = new String(encodedBytes, "US-ASCII");
+//                                readBufferPosition = 0;
+//                                Log.d(TAG, "String that was received in thread: " + data);
+//                                //The variable data now contains a full sensor reading
+//                                btHandler.post(new Runnable() {
+//                                    public void run() {
+//                                        //send complete string to update the sensor values
+//                                        parseSensorData(data);
+//                                    }
+//                                });
+//                                workDone = true;
+//                                break;
+//                            }
+//                            else {
+//                                //Get next byte
+//                                readBuffer[readBufferPosition++] = b;
+//                            }
+//                        }
+//                        if (workDone == true){
+//                            break;
+//                        }
+//                    }
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                    return;
+//                    //Toast.makeText(getApplicationContext(), "Refresh error: !", Toast.LENGTH_SHORT).show();
+//                }
+//                catch (NullPointerException e) {
+//                    e.printStackTrace();
+//                    return;
+////                        Toast.makeText(getApplicationContext(), "Beacon error: Not connected!", Toast.LENGTH_SHORT).show();
+//                }
+//            }
+//            Log.d("workerThread", "Exiting worker thread");
+//        }
+//    }
     //parse the sensor data contained in a string
     //Data is in format: "HR,RPM,INCLINE\n"
     public void parseSensorData(String reading){
         Log.d(TAG, reading);
         try{
-            String[] temp_read = reading.split(";");
-            String[] parts;
-
-            parts = temp_read[temp_read.length-1].split(",");
-            Log.d(TAG, " Attempted Parse on: " + temp_read[temp_read.length-1]);
-
+            String[] temp_read = reading.split("\n");
+            String[] parts = temp_read[temp_read.length-1].split(",");
+            Log.d(TAG, temp_read[temp_read.length-1]);
             int read_length = parts.length;
             int tempHR = 0;
             tempHR = Integer.parseInt(parts[read_length-3]);
@@ -712,44 +711,20 @@ public class MapsActivity2 extends FragmentActivity implements
             if(HRInitCounter < 5){
                 HRInitCounter++;
                 prevHR = 80;
-            }else if(Math.abs(tempHR-prevHR) > 20) {
-                //Do nothing, bad reading
+            }else if(Math.abs(prevHR-tempHR) > 30){
+                //Do nothing, bad hr value due to poor contact with skin
             }else{
-                HRs[HRcounter] = tempHR;
-                HRcounter++;
-
-                if(HRcounter == 4){
-                    int curr_hr = 0;
-                    HRcounter = 0;
-                    for(int i = 0; i < 4; i++){
-                        curr_hr += HRs[i];
-                    }
-                    curr_hr /= 4;
-                    prevHR = curr_hr;
-                }
+                prevHR = tempHR;
             }
-
             prevRPM = Integer.parseInt(parts[read_length-2]);
             double inc = Double.parseDouble(parts[read_length-1]);
-            if(inc < -90 || inc > 90 || (Math.abs(inc-prevInc) > 10)){
+            if(inc < -90 || inc > 90){
                 //do nothing
             }else{
-                Incs[inc_counter] = inc;
-                inc_counter++;
-
-                if(inc_counter == 4){
-                    double curr_inc = 0;
-                    inc_counter = 0;
-                    for(int i = 0; i < 4; i++){
-                        curr_inc += Incs[i];
-                    }
-                    curr_inc /= 4;
-                    prevInc = curr_inc;
-                }
+                prevInc = inc;
             }
-            Log.d(TAG, "New Sensor Reading: " + prevHR + ", " + prevRPM + ", " + prevInc);
+            // Log.d(TAG, "New Sensor Reading: " + prevHR + ", " + prevRPM + ", " + prevInc);
         }catch(Exception e){
-            e.printStackTrace();
             Log.d(TAG, "ERROROROROR");
         }
         //Process the new location
@@ -757,32 +732,29 @@ public class MapsActivity2 extends FragmentActivity implements
     }
 
     //Handle return from bluetooth turn on request
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if(requestCode == REQUEST_ENABLE_BT){
-            if(resultCode == RESULT_OK){
-                connectCFDevice();
-            }
-            else{
-                Toast.makeText(this, "oops. Something went wrong. Try Again.", Toast.LENGTH_SHORT).show();
-            }
-        }
-    }
-
-    @Override
-    public void onBackPressed(){
-        //Close the socket if leaving activity
-        if(btSocket.isConnected()){
-            try {
-                btSocket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        if(running && mGoogleApiClient.isConnected()){
-            LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
-        }
-        super.onBackPressed();
-    }
+//    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+//        if(requestCode == REQUEST_ENABLE_BT){
+//            if(resultCode == RESULT_OK){
+//                connectCFDevice();
+//            }
+//            else{
+//                Toast.makeText(this, "oops. Something went wrong. Try Again.", Toast.LENGTH_SHORT).show();
+//            }
+//        }
+//    }
+//
+//    @Override
+//    public void onBackPressed(){
+//        //Close the socket if leaving activity
+//        if(btSocket.isConnected()){
+//            try {
+//                btSocket.close();
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+//        }
+//        super.onBackPressed();
+//    }
 
 //    @Override
 //    protected void onStop(){

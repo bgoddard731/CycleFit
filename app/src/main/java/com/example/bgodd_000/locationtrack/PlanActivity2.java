@@ -61,7 +61,7 @@ import java.util.Date;
 import java.util.Map;
 import java.util.TreeMap;
 
-public class PlanActivity extends FragmentActivity implements
+public class PlanActivity2 extends FragmentActivity implements
         GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener {
 

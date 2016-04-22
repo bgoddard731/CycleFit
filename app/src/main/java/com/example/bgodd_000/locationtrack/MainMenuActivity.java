@@ -28,6 +28,13 @@ import android.widget.RadioButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonPrimitive;
+import com.google.gson.JsonSerializationContext;
+import com.google.gson.JsonSerializer;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -36,6 +43,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.lang.reflect.Type;
 import java.util.Date;
 import java.util.Map;
 import java.util.TreeMap;
@@ -94,22 +102,33 @@ public class MainMenuActivity extends AppCompatActivity {
 //        routeSummary rt = test.genRT;
 //        Log.d(TAG, "Created");
 //        Log.d(TAG, "Start of Storage: " + SystemClock.currentThreadTimeMillis());
-//        String temp = rt.toString();
-//        String temp2 = rt.shortToString();
-//        for(int i = 0; i < 100; i++){
+//        JsonSerializer<Date> ser = new JsonSerializer<Date>() {
+//            @Override
+//            public JsonElement serialize(Date src, Type typeOfSrc, JsonSerializationContext
+//                    context) {
+//                return src == null ? null : new JsonPrimitive(src.getTime());
+//            }
+//        };
+//
+//        Gson gson = new GsonBuilder()
+//                .registerTypeAdapter(Date.class, ser).create();
+//        String jsonRT = gson.toJson(rt);
+//        smallRouteSummary smallRT = new smallRouteSummary(rt.shortToString());
+//        String smallJsonRT = gson.toJson(smallRT);
+//        for(int i = 0; i < 20; i++){
 //            ContextWrapper cw = new ContextWrapper(getApplicationContext());
 //            try {
-//                OutputStreamWriter outputStreamWriter = new OutputStreamWriter(cw.openFileOutput((test.genRT.end.getTime() + i)+".txt", Context.MODE_PRIVATE));
-//                outputStreamWriter.write(temp);
+//                OutputStreamWriter outputStreamWriter = new OutputStreamWriter(cw.openFileOutput((test.genRT.end.getTime() + i)+".rt", Context.MODE_PRIVATE));
+//                outputStreamWriter.write(jsonRT);
 //                outputStreamWriter.close();
-//                outputStreamWriter = new OutputStreamWriter(cw.openFileOutput((test.genRT.end.getTime() + i)+".txts", Context.MODE_PRIVATE));
-//                outputStreamWriter.write(temp2);
+//                outputStreamWriter = new OutputStreamWriter(cw.openFileOutput((test.genRT.end.getTime() + i)+".rts", Context.MODE_PRIVATE));
+//                outputStreamWriter.write(smallJsonRT);
 //                outputStreamWriter.close();
 //            }
 //            catch (IOException e) {
 //                Log.e("Exception", "File write failed: " + e.toString());
 //            }
-//            prefs.edit().putString((test.genRT.end.getTime() + i) + "", (test.genRT.end.getTime() + i) + ".txt").commit();
+//            prefs.edit().putString((test.genRT.end.getTime() + i) + "", (test.genRT.end.getTime() + i) + ".rt").commit();
 //            Log.d(TAG, "After Storage: " + i);
 //        }
 

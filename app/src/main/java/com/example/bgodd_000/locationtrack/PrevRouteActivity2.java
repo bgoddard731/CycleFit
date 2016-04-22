@@ -51,7 +51,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-public class PrevRouteActivity extends FragmentActivity implements
+public class PrevRouteActivity2 extends FragmentActivity implements
         GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener{
 

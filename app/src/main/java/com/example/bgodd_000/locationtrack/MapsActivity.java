@@ -36,6 +36,12 @@ import com.google.android.gms.maps.model.Polygon;
 import com.google.android.gms.maps.model.PolygonOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonPrimitive;
+import com.google.gson.JsonSerializationContext;
+import com.google.gson.JsonSerializer;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -43,6 +49,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.lang.reflect.Type;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -162,7 +169,7 @@ public class MapsActivity extends FragmentActivity implements
             startActivityForResult(enableBtIntent,REQUEST_ENABLE_BT);
         }else{
             //Make device connection
-           connectCFDevice();
+            connectCFDevice();
         }
 
     }
@@ -204,7 +211,7 @@ public class MapsActivity extends FragmentActivity implements
     public void onConnected(Bundle bundle) {
         //Pull last known location for map initialization
         Location loc = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
-       // LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
+        // LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
         if(loc != null) {
             //If connected, zoom camera to current location
             double currentLat = loc.getLatitude();
@@ -270,12 +277,12 @@ public class MapsActivity extends FragmentActivity implements
         //update the display
         final TextView resultText = (TextView) findViewById(R.id.result_text);
         resultText.setText(String.format("Tracking in Progress:\n" +
-                "Current Distance Traveled: %.2fm\n" +
-                "Current Estimated Speed: %.2f m/s\n" +
-                "Current Incline: %.2f degrees\n" +
-                "Current Heart Rate: %4d bpm\n" +
-                "Current Pedal Speed: %d rpm" ,
-                        distance_traveled, curr_speed, prevInc, prevHR, prevRPM));
+                        "Current Distance Traveled: %.2fm\n" +
+                        "Current Estimated Speed: %.2f m/s\n" +
+                        "Current Incline: %.2f degrees\n" +
+                        "Current Heart Rate: %4d bpm\n" +
+                        "Current Pedal Speed: %d rpm" ,
+                distance_traveled, curr_speed, prevInc, prevHR, prevRPM));
     }
     //Disconnection from service
     @Override
@@ -370,7 +377,7 @@ public class MapsActivity extends FragmentActivity implements
             double route_time = (stop_time - start_time)/1000000000;
             rt.elapsedTime = route_time;
             rt.totalDistance = distance_traveled;
-           double avg_speed = distance_traveled / route_time;
+            double avg_speed = distance_traveled / route_time;
             //avoid a divide by zero
             if(distance_traveled == 0 || route_time == 0) {
                 avg_speed = 0;
@@ -471,7 +478,7 @@ public class MapsActivity extends FragmentActivity implements
         }).start();
 
         //Set up a previous route summary
-        Intent prevIntent = new Intent(this, PrevRouteActivity.class);
+        Intent prevIntent = new Intent(this, PrevRouteActivity2.class);
         prevIntent.putExtra("routeName", name);
         Globals.summary = rt;
         prevIntent.putExtra("fromTrack", true);
@@ -505,11 +512,26 @@ public class MapsActivity extends FragmentActivity implements
     //Print out the route data to a text file
     //Prints out full version and summary version used in route planning functionality
     public void saveRouteToFile(){
+        // Creates the json object which will manage the information received
+        JsonSerializer<Date> ser = new JsonSerializer<Date>() {
+            @Override
+            public JsonElement serialize(Date src, Type typeOfSrc, JsonSerializationContext
+                    context) {
+                return src == null ? null : new JsonPrimitive(src.getTime());
+            }
+        };
+
+        Gson gson = new GsonBuilder()
+                .registerTypeAdapter(Date.class, ser).create();
+        String jsonRT = gson.toJson(rt);
+        smallRouteSummary smallRT = new smallRouteSummary(rt.shortToString());
+        String smallJsonRT = gson.toJson(smallRT);
         ContextWrapper cw = new ContextWrapper(getApplicationContext());
+        //Print both the Long and short summaries as json objects
         //Save short summary for planning
         try {
-            OutputStreamWriter outputStreamWriter = new OutputStreamWriter(cw.openFileOutput(rt.end.getTime()+".txts", Context.MODE_PRIVATE));
-            outputStreamWriter.write(rt.shortToString());
+            OutputStreamWriter outputStreamWriter = new OutputStreamWriter(cw.openFileOutput(rt.end.getTime()+".rts", Context.MODE_PRIVATE));
+            outputStreamWriter.write(smallJsonRT);
             outputStreamWriter.close();
         }
         catch (IOException e) {
@@ -517,11 +539,9 @@ public class MapsActivity extends FragmentActivity implements
         }
         //Save full summary
         try {
-            OutputStreamWriter outputStreamWriter = new OutputStreamWriter(cw.openFileOutput(rt.end.getTime()+".txt", Context.MODE_PRIVATE));
-            String route = rt.toString();
-            outputStreamWriter.write(route);
+            OutputStreamWriter outputStreamWriter = new OutputStreamWriter(cw.openFileOutput(rt.end.getTime()+".rt", Context.MODE_PRIVATE));
+            outputStreamWriter.write(jsonRT);
             outputStreamWriter.close();
-            //Lilly - Here you can send SEND route to server with a JSONpost
         }
         catch (IOException e) {
             Log.e("Exception", "File write failed: " + e.toString());
@@ -624,7 +644,7 @@ public class MapsActivity extends FragmentActivity implements
                 boolean workDone = false;
 
                 try {
-                   // Log.d("refreshThread", "attempting btConnection for receiving");
+                    // Log.d("refreshThread", "attempting btConnection for receiving");
                     bytesAvailable = mmInStream.available();
                     if(bytesAvailable > 12) {
                         //Parse the incoming message
@@ -692,7 +712,9 @@ public class MapsActivity extends FragmentActivity implements
             if(HRInitCounter < 5){
                 HRInitCounter++;
                 prevHR = 80;
-            }else {
+            }else if(Math.abs(tempHR-prevHR) > 20) {
+                //Do nothing, bad reading
+            }else{
                 HRs[HRcounter] = tempHR;
                 HRcounter++;
 
@@ -709,14 +731,14 @@ public class MapsActivity extends FragmentActivity implements
 
             prevRPM = Integer.parseInt(parts[read_length-2]);
             double inc = Double.parseDouble(parts[read_length-1]);
-            if(inc < -90 || inc > 90 || (Math.abs(inc-prevInc) > 6)){
+            if(inc < -90 || inc > 90 || (Math.abs(inc-prevInc) > 10)){
                 //do nothing
             }else{
                 Incs[inc_counter] = inc;
                 inc_counter++;
 
                 if(inc_counter == 4){
-                    int curr_inc = 0;
+                    double curr_inc = 0;
                     inc_counter = 0;
                     for(int i = 0; i < 4; i++){
                         curr_inc += Incs[i];
@@ -738,7 +760,7 @@ public class MapsActivity extends FragmentActivity implements
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if(requestCode == REQUEST_ENABLE_BT){
             if(resultCode == RESULT_OK){
-                    connectCFDevice();
+                connectCFDevice();
             }
             else{
                 Toast.makeText(this, "oops. Something went wrong. Try Again.", Toast.LENGTH_SHORT).show();

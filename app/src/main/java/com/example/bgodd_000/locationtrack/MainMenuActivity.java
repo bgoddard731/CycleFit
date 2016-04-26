@@ -8,6 +8,8 @@ import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.nfc.Tag;
 import android.os.SystemClock;
@@ -170,9 +172,17 @@ public class MainMenuActivity extends AppCompatActivity {
     }
     //navigate to the plan route page
     private void planRouteClick(View v){
-        Log.d(TAG, "Plan Route Click");
-        Intent plan_intent = new Intent(this, PlanActivity.class);
-        startActivity(plan_intent);
+        ConnectivityManager cm =
+                (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo netInfo = cm.getActiveNetworkInfo();
+        if(!netInfo.isConnected()){
+            Toast.makeText(getApplicationContext(), "An internet connection is required to use this feature.", Toast.LENGTH_SHORT).show();
+        }else{
+            Intent plan_intent = new Intent(this, PlanActivity.class);
+            startActivity(plan_intent);
+        }
+        //Log.d(TAG, "Plan Route Click");
+
     }
 
     //Used when the user navigates to the user profile page, sets up the new view

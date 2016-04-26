@@ -69,6 +69,7 @@ public class MapsActivity extends FragmentActivity implements
         LocationListener{
 
     //Constants to use pre integration
+    //We dont use these now
     int DEFALUT_HR = 80;
     double DEFALUT_RPM = 60;
     double DEFAULT_INCLINE = 0;
@@ -82,15 +83,21 @@ public class MapsActivity extends FragmentActivity implements
 
     //Global vars for distance, speed, and time tracking
     private double distance_traveled = 0;
+    //Speeds collected over 4 samples, averaged, then updated
     private double[] speeds = new double[4];
+    //Holds the previous speed
     private double curr_speed = 0;
+    //counter to determine which speed sample we are on
     private int speed_count = 0;
+    //Start time for the route
     private double start_time = -1;
     private double prev_time = 0;
     //Previous location used to compare locations between consecutive samples
     private Location returnLoc;
     private Location prev_loc;
+    //Boolean to determine if tracking is happening
     private boolean running = false;
+    //Boolean to display save/discard options on the start/stop buttons
     private boolean saveOptions = false;
     //Route summary object that will allow a route to be stored
     private routeSummary rt = new routeSummary();
@@ -104,6 +111,7 @@ public class MapsActivity extends FragmentActivity implements
     final byte delimiter = 59; //ASCII value for semicolon char, used to end BT transmission packet
     int readBufferPosition = 0;
     private Handler btHandler;
+    //HR, Incline, calculated like speed
     private int prevHR = 80;
     private double[] HRs = new double[4];
     private int HRcounter = 0;
@@ -461,7 +469,7 @@ public class MapsActivity extends FragmentActivity implements
                 //Write the data to text files
                 saveRouteToFile();
                 //Store the file name in shared preferences
-                prefs.edit().putString("" + rt.end.getTime(), rt.end.getTime()+".txt").apply();
+                prefs.edit().putString("" + rt.end.getTime(), rt.end.getTime()+".rt").apply();
                 Map<String, ?> map = prefs.getAll();
                 //Delete a route if number exceeds maximum stored
                 if(map.size() > MAXROUTES + 1){
@@ -478,7 +486,7 @@ public class MapsActivity extends FragmentActivity implements
         }).start();
 
         //Set up a previous route summary
-        Intent prevIntent = new Intent(this, PrevRouteActivity2.class);
+        Intent prevIntent = new Intent(this, PrevRouteActivity.class);
         prevIntent.putExtra("routeName", name);
         Globals.summary = rt;
         prevIntent.putExtra("fromTrack", true);

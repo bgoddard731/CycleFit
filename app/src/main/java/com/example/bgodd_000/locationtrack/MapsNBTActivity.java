@@ -36,6 +36,12 @@ import com.google.android.gms.maps.model.Polygon;
 import com.google.android.gms.maps.model.PolygonOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonPrimitive;
+import com.google.gson.JsonSerializationContext;
+import com.google.gson.JsonSerializer;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -43,6 +49,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.lang.reflect.Type;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -503,11 +510,26 @@ public class MapsNBTActivity extends FragmentActivity implements
     //Print out the route data to a text file
     //Prints out full version and summary version used in route planning functionality
     public void saveRouteToFile(){
+        // Creates the json object which will manage the information received
+        JsonSerializer<Date> ser = new JsonSerializer<Date>() {
+            @Override
+            public JsonElement serialize(Date src, Type typeOfSrc, JsonSerializationContext
+                    context) {
+                return src == null ? null : new JsonPrimitive(src.getTime());
+            }
+        };
+
+        Gson gson = new GsonBuilder()
+                .registerTypeAdapter(Date.class, ser).create();
+        String jsonRT = gson.toJson(rt);
+        smallRouteSummary smallRT = new smallRouteSummary(rt.shortToString());
+        String smallJsonRT = gson.toJson(smallRT);
         ContextWrapper cw = new ContextWrapper(getApplicationContext());
+        //Print both the Long and short summaries as json objects
         //Save short summary for planning
         try {
-            OutputStreamWriter outputStreamWriter = new OutputStreamWriter(cw.openFileOutput(rt.end.getTime()+".txts", Context.MODE_PRIVATE));
-            outputStreamWriter.write(rt.shortToString());
+            OutputStreamWriter outputStreamWriter = new OutputStreamWriter(cw.openFileOutput(rt.end.getTime()+".rts", Context.MODE_PRIVATE));
+            outputStreamWriter.write(smallJsonRT);
             outputStreamWriter.close();
         }
         catch (IOException e) {
@@ -515,8 +537,8 @@ public class MapsNBTActivity extends FragmentActivity implements
         }
         //Save full summary
         try {
-            OutputStreamWriter outputStreamWriter = new OutputStreamWriter(cw.openFileOutput(rt.end.getTime()+".txt", Context.MODE_PRIVATE));
-            outputStreamWriter.write(rt.toString());
+            OutputStreamWriter outputStreamWriter = new OutputStreamWriter(cw.openFileOutput(rt.end.getTime()+".rt", Context.MODE_PRIVATE));
+            outputStreamWriter.write(jsonRT);
             outputStreamWriter.close();
         }
         catch (IOException e) {

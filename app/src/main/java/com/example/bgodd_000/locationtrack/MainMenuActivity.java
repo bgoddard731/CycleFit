@@ -88,11 +88,11 @@ public class MainMenuActivity extends AppCompatActivity {
         Log.d(TAG, "Track Route Click");
         if(user.initialized){
             //User must be initialized to track a route
-            Intent mapintent = new Intent(this, MapsActivity.class);
-            startActivity(mapintent);
+            //Intent mapintent = new Intent(this, MapsActivity.class);
+            //startActivity(mapintent);
             //Debug - nonBTversion of routeTracking:
-//            Intent mapNBTintent = new Intent(this, MapsNBTActivity.class);
-//            startActivity(mapNBTintent);
+            Intent mapNBTintent = new Intent(this, MapsNBTActivity.class);
+            startActivity(mapNBTintent);
             Globals.user = user;
 
 

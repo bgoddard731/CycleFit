@@ -459,7 +459,7 @@ public class MapsNBTActivity extends FragmentActivity implements
                 //Write the data to text files
                 saveRouteToFile();
                 //Store the file name in shared preferences
-                prefs.edit().putString("" + rt.end.getTime(), rt.end.getTime()+".txt").apply();
+                prefs.edit().putString("" + rt.end.getTime(), rt.end.getTime()+".rt").apply();
                 Map<String, ?> map = prefs.getAll();
                 //Delete a route if number exceeds maximum stored
                 if(map.size() > MAXROUTES + 1){

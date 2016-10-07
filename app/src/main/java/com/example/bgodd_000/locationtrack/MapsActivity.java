@@ -642,6 +642,9 @@ public class MapsActivity extends FragmentActivity implements
             mmInStream = tmpIn;
         }
         public void run() {
+
+
+            ////THIS IS WHERE YOU WANT TO SEND STUFF
             if(!mBluetoothAdapter.isEnabled()){
                 Log.d("workerThread", "BT is not enabled for a settings worker thread!");
                 return;
@@ -703,7 +706,7 @@ public class MapsActivity extends FragmentActivity implements
         }
     }
     //parse the sensor data contained in a string
-    //Data is in format: "HR,RPM,INCLINE\n"
+    //Data is in format: "HR,RPM,INCLINE;"
     public void parseSensorData(String reading){
         Log.d(TAG, reading);
         try{
